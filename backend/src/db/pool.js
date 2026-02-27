@@ -8,6 +8,7 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'howmanyareplaying',
   user: process.env.DB_USER || 'hmapuser',
   password: process.env.DB_PASSWORD,
+  ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
 });
 
 pool.on('error', (err) => {

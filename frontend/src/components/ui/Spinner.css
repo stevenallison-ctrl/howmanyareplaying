@@ -1,0 +1,24 @@
+.spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.spinner--sm { padding: 8px; }
+.spinner--lg { padding: 64px; }
+
+.spinner__ring {
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.spinner--sm .spinner__ring { width: 20px; height: 20px; }
+.spinner--md .spinner__ring { width: 36px; height: 36px; }
+.spinner--lg .spinner__ring { width: 52px; height: 52px; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

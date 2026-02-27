@@ -1,0 +1,30 @@
+.time-range-filter {
+  display: flex;
+  gap: 4px;
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  width: fit-content;
+}
+
+.range-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: background-color 0.15s, color 0.15s;
+}
+.range-tab:hover {
+  color: var(--color-text);
+  background-color: var(--color-surface);
+}
+.range-tab--active {
+  background-color: var(--color-accent);
+  color: #1b2838;
+}
+.range-tab--active:hover {
+  background-color: var(--color-accent-hover);
+  color: #1b2838;
+}

@@ -1,0 +1,36 @@
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.home-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.home-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.home-subtitle {
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.home-updated {
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.home-ccu-notice {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-bottom: -8px;
+}

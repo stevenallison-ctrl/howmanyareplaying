@@ -1,0 +1,72 @@
+.game-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+.back-link:hover {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.game-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.game-hero__image {
+  border-radius: var(--radius-md);
+  width: 184px;
+  height: 69px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.game-hero__name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.game-hero__appid {
+  color: var(--color-text-dim);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.game-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chart-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chart-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chart-section__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+}

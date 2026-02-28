@@ -67,7 +67,7 @@ export async function pollLive() {
     for (const { rank, appid, peak_in_game } of ranks) {
       // peak_24h = max ccu in last 24h from ccu_snapshots
       const { rows: peakRows } = await client.query(
-        `SELECT COALESCE(MAX(ccu), $1) AS peak_24h
+        `SELECT GREATEST(MAX(ccu), $1) AS peak_24h
          FROM ccu_snapshots
          WHERE appid = $2
            AND captured_at >= NOW() - INTERVAL '24 hours'`,

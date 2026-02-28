@@ -12,10 +12,10 @@ export default function Wishlist() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    document.title = 'Top 100 Most Wishlisted Games on Steam | How Many Are Playing';
+    document.title = 'Top Upcoming Wishlisted Games on Steam | How Many Are Playing';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute('content',
-      'The 100 most-wishlisted games on Steam, ranked and refreshed daily.');
+      'The most-wishlisted upcoming games on Steam — unreleased titles only, ranked and refreshed daily.');
   }, []);
 
   useEffect(() => {
@@ -31,8 +31,8 @@ export default function Wishlist() {
   return (
     <div className="wishlist-page">
       <div className="wishlist-header">
-        <h1 className="wishlist-title">Top 100 Most Wishlisted Games</h1>
-        <p className="wishlist-subtitle">Most-wishlisted games on Steam &mdash; refreshed daily</p>
+        <h1 className="wishlist-title">Top Upcoming Wishlisted Games</h1>
+        <p className="wishlist-subtitle">Most-wishlisted unreleased games on Steam &mdash; refreshed daily</p>
       </div>
 
       {loading && <Spinner size="lg" />}

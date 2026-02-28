@@ -18,6 +18,7 @@
 .game-hero {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 20px;
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -33,6 +34,13 @@
   flex-shrink: 0;
 }
 
+.game-hero__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .game-hero__name {
   font-size: 22px;
   font-weight: 700;
@@ -42,13 +50,13 @@
 .game-hero__appid {
   color: var(--color-text-dim);
   font-size: 12px;
-  margin-top: 4px;
 }
 
-.game-stats {
+.game-hero__stats {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 .chart-section {

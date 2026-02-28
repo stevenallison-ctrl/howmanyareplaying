@@ -13,9 +13,9 @@ import './GameDetail.css';
 export default function GameDetail() {
   const { appid } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const range = searchParams.get('range') ?? 'day';
-  const VALID_RANGES = new Set(['day', 'week', 'month']);
-  const safeRange = VALID_RANGES.has(range) ? range : 'day';
+  const range = searchParams.get('range') ?? 'week';
+  const VALID_RANGES = new Set(['week', 'month']);
+  const safeRange = VALID_RANGES.has(range) ? range : 'week';
 
   const [game, setGame] = useState(null);
   const [gameError, setGameError] = useState(null);
@@ -48,9 +48,6 @@ export default function GameDetail() {
     setSearchParams({ range: newRange }, { replace: true });
   };
 
-  const currentCcu = historyData?.[historyData.length - 1]?.ccu ?? null;
-  const peakCcu = historyData ? Math.max(...historyData.map((d) => d.ccu)) : null;
-
   return (
     <div className="game-detail-page">
       <Link to="/" replace className="back-link">← Back to Leaderboard</Link>
@@ -69,21 +66,20 @@ export default function GameDetail() {
           <div className="game-hero__info">
             <h1 className="game-hero__name">{game.name}</h1>
             <p className="game-hero__appid">App ID: {game.appid}</p>
+            <div className="game-hero__stats">
+              {game.current_ccu != null && (
+                <StatBadge label="Current Players" value={formatNumber(game.current_ccu)} />
+              )}
+              {game.peak_24h != null && (
+                <StatBadge label="Peak (24h)" value={formatNumber(game.peak_24h)} />
+              )}
+              {allTimePeak != null && (
+                <StatBadge label="All-time Peak" value={formatNumber(allTimePeak)} />
+              )}
+            </div>
           </div>
         </div>
       )}
-
-      <div className="game-stats">
-        {currentCcu != null && (
-          <StatBadge label="Current Players" value={formatNumber(currentCcu)} />
-        )}
-        {peakCcu != null && (
-          <StatBadge label={`Peak (${safeRange === 'day' ? '24h' : safeRange === 'week' ? '7d' : '30d'})`} value={formatNumber(peakCcu)} />
-        )}
-        {allTimePeak != null && (
-          <StatBadge label="All-time Peak" value={formatNumber(allTimePeak)} />
-        )}
-      </div>
 
       <div className="chart-section">
         <div className="chart-section__header">

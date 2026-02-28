@@ -2,9 +2,8 @@ import React from 'react';
 import './TimeRangeFilter.css';
 
 const RANGES = [
-  { value: 'day',   label: 'Last 24h Peak' },
-  { value: 'week',  label: 'Last 7 Days Avg Peak' },
-  { value: 'month', label: 'Last 30 Days Avg Peak' },
+  { value: 'week',  label: 'Last 7 Days' },
+  { value: 'month', label: 'Last 30 Days' },
 ];
 
 export default function TimeRangeFilter({ value, onChange }) {

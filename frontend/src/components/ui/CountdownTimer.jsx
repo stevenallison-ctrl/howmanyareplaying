@@ -19,6 +19,7 @@ function formatCountdown(totalSeconds) {
 export default function CountdownTimer({ lastUpdatedAt, onRefetch }) {
   const [seconds, setSeconds] = useState(() => getSecondsRemaining(lastUpdatedAt));
   const onRefetchRef = useRef(onRefetch);
+  const valueRef     = useRef(null);
   onRefetchRef.current = onRefetch;
 
   useEffect(() => {
@@ -40,11 +41,20 @@ export default function CountdownTimer({ lastUpdatedAt, onRefetch }) {
     return () => clearInterval(id);
   }, [lastUpdatedAt]);
 
+  // Restart the CSS animation on every tick via the reflow trick
+  useEffect(() => {
+    const el = valueRef.current;
+    if (!el) return;
+    el.style.animation = 'none';
+    void el.offsetHeight; // force layout recalc
+    el.style.animation = '';
+  }, [seconds]);
+
   return (
     <div className="countdown-timer" title="Time until next CCU refresh">
       <span className="countdown-timer__label">Next update in</span>
       <span
-        key={seconds}
+        ref={valueRef}
         className={`countdown-timer__value${seconds === 0 ? ' countdown-timer__value--refreshing' : ''}`}
       >
         {seconds === 0 ? 'Refreshing\u2026' : formatCountdown(seconds)}

@@ -59,7 +59,7 @@ export async function fetchGameCCU(appid) {
 export async function fetchAppDetails(appid) {
   try {
     const res = await fetch(
-      `${APP_DETAILS_BASE}?appids=${appid}&filters=basic`,
+      `${APP_DETAILS_BASE}?appids=${appid}&filters=basic,release_date`,
     );
     if (!res.ok) return null;
     const json = await res.json();

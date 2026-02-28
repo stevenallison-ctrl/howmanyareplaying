@@ -26,7 +26,7 @@ router.get('/', asyncHandler(async (req, res) => {
   if (view === 'live') {
     const { rows } = await pool.query(`
       SELECT
-        ROW_NUMBER() OVER (ORDER BY lc.current_ccu DESC) AS rank,
+        lc.rank,
         lc.appid,
         lc.current_ccu      AS ccu,
         lc.peak_24h,
@@ -36,7 +36,7 @@ router.get('/', asyncHandler(async (req, res) => {
         g.header_image
       FROM leaderboard_cache lc
       JOIN games g ON g.appid = lc.appid
-      ORDER BY lc.current_ccu DESC
+      ORDER BY lc.rank ASC
       LIMIT 100
     `);
     return res.json({ view, data: rows, count: rows.length, data_days: 1 });

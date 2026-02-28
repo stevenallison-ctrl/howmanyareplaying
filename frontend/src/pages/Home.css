@@ -34,3 +34,16 @@
   color: var(--color-text-dim);
   margin-bottom: -8px;
 }
+
+.home-data-notice {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  line-height: 1.6;
+}
+.home-data-notice strong {
+  color: var(--color-accent);
+}

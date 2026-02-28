@@ -18,15 +18,22 @@ const VIEW_TITLES = {
   '365d':'Average Peak CCU — Last Year',
 };
 
+const AVG_VIEWS = new Set(['7d', '30d', '90d', '180d', '365d']);
+
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get('view') ?? 'live';
 
-  const { data, loading, error, lastUpdated } = useLiveData(view);
+  const { data, meta, loading, error, lastUpdated } = useLiveData(view);
 
   const handleViewChange = (newView) => {
     setSearchParams({ view: newView });
   };
+
+  const isAvgView = AVG_VIEWS.has(view);
+  const periodDays = meta?.period_days ?? parseInt(view, 10);
+  const dataDays = meta?.data_days ?? 0;
+  const dataComplete = dataDays >= periodDays;
 
   return (
     <div className="home-page">
@@ -48,7 +55,24 @@ export default function Home() {
       {error && <ErrorBanner message={error} />}
       {data && (
         <>
-          <p className="home-ccu-notice">CCU counts are updated every 60 minutes.</p>
+          {isAvgView && !dataComplete && (
+            <div className="home-data-notice">
+              <strong>Building history:</strong> ranked by avg peak CCU across{' '}
+              {dataDays} of {periodDays} days collected so far. Rankings are
+              independently computed for each time window — as data accumulates,
+              titles and order will diverge from the Live and Today views based
+              on each game&apos;s actual historical average.
+            </div>
+          )}
+          {isAvgView && dataComplete && (
+            <p className="home-ccu-notice">
+              Ranked by average peak CCU over {periodDays} days. Games with higher
+              historical averages may differ from the Live view.
+            </p>
+          )}
+          {!isAvgView && (
+            <p className="home-ccu-notice">CCU counts are updated every 60 minutes.</p>
+          )}
           <LeaderboardTable games={data} view={view} />
         </>
       )}

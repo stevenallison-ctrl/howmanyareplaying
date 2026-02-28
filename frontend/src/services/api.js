@@ -10,8 +10,10 @@ async function request(path) {
 }
 
 export const api = {
-  getLive: () => request('/live'),
-  getLeaderboard: (view = 'live') => request(`/leaderboard?view=${view}`),
-  getHistory: (appid, range = 'day') => request(`/history/${appid}?range=${range}`),
-  getGame: (appid) => request(`/games/${appid}`),
+  getLive:       () => request('/live'),
+  getLeaderboard:(view = 'live') => request(`/leaderboard?view=${view}`),
+  getHistory:    (appid, range = 'day') => request(`/history/${appid}?range=${range}`),
+  getGame:       (appid) => request(`/games/${appid}`),
+  getWishlist:   () => request('/wishlist'),
+  searchGames:   (q) => request(`/search?q=${encodeURIComponent(q)}`),
 };

@@ -19,13 +19,30 @@ export default function GameDetail() {
 
   const [game, setGame] = useState(null);
   const [gameError, setGameError] = useState(null);
-  const { data: historyData, loading: historyLoading, error: historyError } = useHistory(appid, safeRange);
+  const { data: historyData, allTimePeak, loading: historyLoading, error: historyError } = useHistory(appid, safeRange);
 
   useEffect(() => {
     api.getGame(appid)
       .then(setGame)
       .catch((err) => setGameError(err.message));
   }, [appid]);
+
+  useEffect(() => {
+    if (!game) return;
+    document.title = `${game.name} — Player Count | How Many Are Playing`;
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute('content',
+      `Live and historical concurrent player count for ${game.name} on Steam.`);
+  }, [game]);
+
+  useEffect(() => {
+    return () => {
+      document.title = 'Top 100 Steam Games by CCU | How Many Are Playing';
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.setAttribute('content',
+        'Real-time Steam concurrent player leaderboard — top 100 games updated every hour. Track player counts, trends, and historical peaks.');
+    };
+  }, []);
 
   const handleRangeChange = (newRange) => {
     setSearchParams({ range: newRange }, { replace: true });
@@ -62,6 +79,9 @@ export default function GameDetail() {
         )}
         {peakCcu != null && (
           <StatBadge label={`Peak (${safeRange === 'day' ? '24h' : safeRange === 'week' ? '7d' : '30d'})`} value={formatNumber(peakCcu)} />
+        )}
+        {allTimePeak != null && (
+          <StatBadge label="All-time Peak" value={formatNumber(allTimePeak)} />
         )}
       </div>
 

@@ -12,6 +12,13 @@ router.get('/:appid', asyncHandler(async (req, res) => {
 
   const range = req.query.range ?? 'day';
 
+  // All-time peak — independent of range
+  const { rows: peakRows } = await pool.query(
+    'SELECT MAX(peak_ccu) AS all_time_peak FROM daily_peaks WHERE appid = $1',
+    [appid],
+  );
+  const all_time_peak = peakRows[0]?.all_time_peak ?? null;
+
   let rows;
 
   if (range === 'day') {
@@ -46,7 +53,7 @@ router.get('/:appid', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'range must be day, week, or month' });
   }
 
-  res.json({ appid, range, data: rows });
+  res.json({ appid, range, data: rows, all_time_peak });
 }));
 
 export default router;

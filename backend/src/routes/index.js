@@ -3,6 +3,8 @@ import liveRouter from './live.js';
 import historyRouter from './history.js';
 import gamesRouter from './games.js';
 import leaderboardRouter from './leaderboard.js';
+import wishlistRouter from './wishlist.js';
+import searchRouter from './search.js';
 
 const router = Router();
 
@@ -10,5 +12,7 @@ router.use('/api/live', liveRouter);
 router.use('/api/leaderboard', leaderboardRouter);
 router.use('/api/history', historyRouter);
 router.use('/api/games', gamesRouter);
+router.use('/api/wishlist', wishlistRouter);
+router.use('/api/search', searchRouter);
 
 export default router;

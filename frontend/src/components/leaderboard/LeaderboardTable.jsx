@@ -24,6 +24,7 @@ export default function LeaderboardTable({ games, view = 'live' }) {
             <th className="col-game">Game</th>
             <th className="col-ccu">{ccuLabel}</th>
             {view === 'live' && <th className="col-peak">24h Peak</th>}
+            {view === 'live' && <th className="col-trend">Trend</th>}
           </tr>
         </thead>
         <tbody>

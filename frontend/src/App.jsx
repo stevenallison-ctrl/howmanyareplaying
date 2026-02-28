@@ -4,6 +4,7 @@ import Header from './components/layout/Header.jsx';
 import Footer from './components/layout/Footer.jsx';
 import Home from './pages/Home.jsx';
 import GameDetail from './pages/GameDetail.jsx';
+import Wishlist from './pages/Wishlist.jsx';
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/game/:appid" element={<GameDetail />} />
+            <Route path="/wishlist" element={<Wishlist />} />
           </Routes>
         </main>
         <Footer />

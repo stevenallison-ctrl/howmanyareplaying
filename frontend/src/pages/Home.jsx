@@ -1,21 +1,32 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLiveData } from '../hooks/useLiveData.js';
 import LeaderboardTable from '../components/leaderboard/LeaderboardTable.jsx';
 import LeaderboardViewFilter from '../components/filters/LeaderboardViewFilter.jsx';
+import CountdownTimer from '../components/ui/CountdownTimer.jsx';
+import SearchBar from '../components/ui/SearchBar.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import ErrorBanner from '../components/ui/ErrorBanner.jsx';
-import { formatRelativeTime } from '../utils/formatDate.js';
 import './Home.css';
 
 const VIEW_TITLES = {
-  live:  'Current Concurrent Players',
-  today: 'Peak CCU Today',
-  '7d':  'Average Peak CCU — Last 7 Days',
-  '30d': 'Average Peak CCU — Last 30 Days',
-  '90d': 'Average Peak CCU — Last 90 Days',
-  '180d':'Average Peak CCU — Last 180 Days',
-  '365d':'Average Peak CCU — Last Year',
+  live:   'Current Concurrent Players',
+  today:  'Peak CCU Today',
+  '7d':   'Average Peak CCU — Last 7 Days',
+  '30d':  'Average Peak CCU — Last 30 Days',
+  '90d':  'Average Peak CCU — Last 90 Days',
+  '180d': 'Average Peak CCU — Last 180 Days',
+  '365d': 'Average Peak CCU — Last Year',
+};
+
+const VIEW_SEO = {
+  live:   { title: 'Top 100 Steam Games by CCU | How Many Are Playing',               desc: 'Live concurrent player counts for the top 100 Steam games, updated every hour.' },
+  today:  { title: 'Top Steam Games — Peak CCU Today | How Many Are Playing',         desc: "Today's peak concurrent player counts for top Steam games." },
+  '7d':   { title: 'Top Steam Games — Last 7 Days Avg CCU | How Many Are Playing',    desc: 'Average peak concurrent players for top Steam games over the last 7 days.' },
+  '30d':  { title: 'Top Steam Games — Last 30 Days Avg CCU | How Many Are Playing',   desc: 'Average peak concurrent players for top Steam games over the last 30 days.' },
+  '90d':  { title: 'Top Steam Games — Last 90 Days Avg CCU | How Many Are Playing',   desc: 'Average peak concurrent players for top Steam games over the last 90 days.' },
+  '180d': { title: 'Top Steam Games — Last 180 Days Avg CCU | How Many Are Playing',  desc: 'Average peak concurrent players for top Steam games over the last 180 days.' },
+  '365d': { title: 'Top Steam Games — Last Year Avg CCU | How Many Are Playing',      desc: 'Average peak concurrent players for top Steam games over the last year.' },
 };
 
 const AVG_VIEWS = new Set(['7d', '30d', '90d', '180d', '365d']);
@@ -24,7 +35,14 @@ export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get('view') ?? 'live';
 
-  const { data, meta, loading, error, lastUpdated } = useLiveData(view);
+  const { data, meta, loading, error, refetch } = useLiveData(view);
+
+  useEffect(() => {
+    const seo = VIEW_SEO[view] ?? VIEW_SEO.live;
+    document.title = seo.title;
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute('content', seo.desc);
+  }, [view]);
 
   const handleViewChange = (newView) => {
     setSearchParams({ view: newView });
@@ -42,11 +60,15 @@ export default function Home() {
           <h1 className="home-title">Top 100 Steam Games</h1>
           <p className="home-subtitle">{VIEW_TITLES[view] ?? 'Steam leaderboard'}</p>
         </div>
-        {view === 'live' && lastUpdated && (
-          <div className="home-updated">
-            Updated {formatRelativeTime(lastUpdated)}
-          </div>
-        )}
+        <div className="home-header__right">
+          <SearchBar />
+          {view === 'live' && (
+            <CountdownTimer
+              lastUpdatedAt={data?.[0]?.last_updated_at ?? null}
+              onRefetch={refetch}
+            />
+          )}
+        </div>
       </div>
 
       <LeaderboardViewFilter value={view} onChange={handleViewChange} />

@@ -115,6 +115,12 @@ export async function pollLive() {
     }
 
     // 4. Rebuild leaderboard_cache atomically
+    // Snapshot current CCU values before wiping, so we can compute trend delta
+    const { rows: prevRows } = await client.query(
+      'SELECT appid, current_ccu FROM leaderboard_cache',
+    );
+    const prevCcuMap = new Map(prevRows.map((r) => [r.appid, r.current_ccu]));
+
     await client.query('DELETE FROM leaderboard_cache');
     for (const { rank, appid, peak_in_game } of ranks) {
       const { rows: peakRows } = await client.query(
@@ -125,16 +131,18 @@ export async function pollLive() {
         [peak_in_game, appid],
       );
       const peak_24h = peakRows[0].peak_24h;
+      const prev_ccu = prevCcuMap.get(appid) ?? null;
 
       await client.query(
-        `INSERT INTO leaderboard_cache (rank, appid, current_ccu, peak_24h, last_updated_at)
-         VALUES ($1, $2, $3, $4, NOW())
+        `INSERT INTO leaderboard_cache (rank, appid, current_ccu, peak_24h, prev_ccu, last_updated_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (appid) DO UPDATE
-           SET rank = EXCLUDED.rank,
-               current_ccu = EXCLUDED.current_ccu,
-               peak_24h = EXCLUDED.peak_24h,
+           SET rank            = EXCLUDED.rank,
+               current_ccu     = EXCLUDED.current_ccu,
+               peak_24h        = EXCLUDED.peak_24h,
+               prev_ccu        = EXCLUDED.prev_ccu,
                last_updated_at = NOW()`,
-        [rank, appid, peak_in_game, peak_24h],
+        [rank, appid, peak_in_game, peak_24h, prev_ccu],
       );
     }
 

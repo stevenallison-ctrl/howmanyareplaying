@@ -52,3 +52,22 @@
   font-weight: 500;
   transition: color 0.15s;
 }
+
+.col-trend {
+  text-align: right;
+  padding: 10px 16px;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.col-trend--up    { color: var(--color-green); }
+.col-trend--down  { color: var(--color-red); }
+.col-trend--neutral {
+  color: var(--color-text-dim);
+  font-weight: 400;
+}
+.trend-arrow {
+  font-size: 10px;
+  vertical-align: middle;
+}

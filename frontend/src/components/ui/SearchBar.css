@@ -1,0 +1,104 @@
+.search-bar {
+  position: relative;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.search-bar__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  transition: border-color 0.15s;
+}
+.search-bar__input-wrap:focus-within {
+  border-color: var(--color-accent);
+}
+
+.search-bar__icon {
+  font-size: 13px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.search-bar__input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--color-text);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  min-width: 0;
+}
+.search-bar__input::placeholder {
+  color: var(--color-text-dim);
+}
+.search-bar__input::-webkit-search-cancel-button { display: none; }
+
+.search-bar__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.search-bar__clear {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.search-bar__clear:hover {
+  color: var(--color-text);
+}
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  list-style: none;
+  z-index: 200;
+  max-height: 360px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.search-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background-color 0.1s;
+}
+.search-dropdown__item:hover {
+  background-color: var(--color-surface-alt);
+  text-decoration: none;
+  color: var(--color-accent);
+}
+
+.search-dropdown__thumb {
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.search-dropdown__name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

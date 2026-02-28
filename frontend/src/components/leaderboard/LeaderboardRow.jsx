@@ -4,6 +4,24 @@ import RankBadge from './RankBadge.jsx';
 import { formatNumber } from '../../utils/formatNumber.js';
 import './LeaderboardRow.css';
 
+function TrendCell({ ccu, prevCcu }) {
+  if (prevCcu == null || ccu == null) {
+    return <td className="col-trend col-trend--neutral">&mdash;</td>;
+  }
+  const delta = Number(ccu) - Number(prevCcu);
+  if (delta === 0) {
+    return <td className="col-trend col-trend--neutral">&mdash;</td>;
+  }
+  const isUp = delta > 0;
+  return (
+    <td className={`col-trend ${isUp ? 'col-trend--up' : 'col-trend--down'}`}>
+      <span className="trend-arrow">{isUp ? '▲' : '▼'}</span>
+      {' '}
+      {formatNumber(Math.abs(delta))}
+    </td>
+  );
+}
+
 export default function LeaderboardRow({ game, view = 'live' }) {
   return (
     <tr className="leaderboard-row">
@@ -28,6 +46,9 @@ export default function LeaderboardRow({ game, view = 'live' }) {
       <td className="col-ccu">{formatNumber(game.ccu)}</td>
       {view === 'live' && (
         <td className="col-peak">{formatNumber(game.peak_24h)}</td>
+      )}
+      {view === 'live' && (
+        <TrendCell ccu={game.ccu} prevCcu={game.prev_ccu} />
       )}
     </tr>
   );

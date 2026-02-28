@@ -12,6 +12,7 @@ export default function Header() {
         </Link>
         <nav className="site-nav">
           <Link to="/">Leaderboard</Link>
+          <Link to="/wishlist">Wishlist</Link>
         </nav>
       </div>
     </header>

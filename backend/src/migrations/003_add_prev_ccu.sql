@@ -1,0 +1,1 @@
+ALTER TABLE leaderboard_cache ADD COLUMN IF NOT EXISTS prev_ccu INTEGER;

@@ -1,0 +1,22 @@
+.wishlist-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.wishlist-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wishlist-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.wishlist-subtitle {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}

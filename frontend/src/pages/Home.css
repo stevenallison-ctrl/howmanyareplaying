@@ -24,9 +24,11 @@
   font-size: 14px;
 }
 
-.home-updated {
-  font-size: 12px;
-  color: var(--color-text-dim);
+.home-header__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .home-ccu-notice {

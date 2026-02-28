@@ -30,6 +30,7 @@ router.get('/', asyncHandler(async (req, res) => {
         lc.appid,
         lc.current_ccu      AS ccu,
         lc.peak_24h,
+        lc.prev_ccu,
         lc.last_updated_at,
         g.name,
         g.header_image

@@ -3,6 +3,8 @@ import { api } from '../services/api.js';
 
 const POLL_INTERVAL_MS = 60 * 60 * 1000; // 60 minutes
 
+const VALID_VIEWS = new Set(['live', 'today', '7d', '30d', '90d', '180d', '365d']);
+
 export function useLiveData(view = 'live') {
   const [data, setData] = useState(null);
   const [meta, setMeta] = useState(null); // { data_days, period_days }
@@ -11,6 +13,10 @@ export function useLiveData(view = 'live') {
   const [lastUpdated, setLastUpdated] = useState(null);
 
   const fetchData = useCallback(async () => {
+    if (!VALID_VIEWS.has(view)) {
+      setLoading(false);
+      return;
+    }
     try {
       const result = await api.getLeaderboard(view);
       setData(result.data);
@@ -25,6 +31,12 @@ export function useLiveData(view = 'live') {
   }, [view]);
 
   useEffect(() => {
+    if (!VALID_VIEWS.has(view)) {
+      setLoading(false);
+      setData(null);
+      setMeta(null);
+      return;
+    }
     setLoading(true);
     setData(null);
     setMeta(null);

@@ -5,6 +5,7 @@ import Footer from './components/layout/Footer.jsx';
 import Home from './pages/Home.jsx';
 import GameDetail from './pages/GameDetail.jsx';
 import Wishlist from './pages/Wishlist.jsx';
+import Compare from './pages/Compare.jsx';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/game/:appid" element={<GameDetail />} />
             <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/compare" element={<Compare />} />
           </Routes>
         </main>
         <Footer />

@@ -12,7 +12,7 @@ router.get('/:appid', asyncHandler(async (req, res) => {
 
   const { rows } = await pool.query(
     `SELECT g.appid, g.name, g.header_image, g.last_fetched_at,
-            lc.current_ccu, lc.peak_24h
+            lc.current_ccu, lc.peak_24h, lc.rank
      FROM games g
      LEFT JOIN leaderboard_cache lc ON lc.appid = g.appid
      WHERE g.appid = $1`,

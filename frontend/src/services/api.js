@@ -16,4 +16,6 @@ export const api = {
   getGame:       (appid) => request(`/games/${appid}`),
   getWishlist:   () => request('/wishlist'),
   searchGames:   (q) => request(`/search?q=${encodeURIComponent(q)}`),
+  getMovers:     () => request('/movers'),
+  getRecords:    () => request('/records'),
 };

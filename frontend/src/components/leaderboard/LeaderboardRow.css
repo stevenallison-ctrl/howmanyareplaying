@@ -71,3 +71,9 @@
   font-size: 10px;
   vertical-align: middle;
 }
+
+@media (max-width: 640px) {
+  .col-peak, .col-trend { display: none; }
+  .game-thumb { width: 56px; height: 26px; }
+  .game-name  { font-size: 13px; }
+}

@@ -6,7 +6,7 @@ import logger from '../utils/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const MIGRATIONS = ['001_init.sql', '002_add_release_date.sql', '003_add_prev_ccu.sql'];
+const MIGRATIONS = ['001_init.sql', '002_add_release_date.sql', '003_add_prev_ccu.sql', '004_peak_records.sql'];
 
 export async function runMigrations() {
   for (const file of MIGRATIONS) {

@@ -9,6 +9,8 @@ export const LEADERBOARD_VIEWS = [
   { value: '90d',   label: '90 Days',   description: 'Avg peak CCU — last 90 days' },
   { value: '180d',  label: '180 Days',  description: 'Avg peak CCU — last 180 days' },
   { value: '365d',  label: '1 Year',    description: 'Avg peak CCU — last 365 days' },
+  { value: 'movers',  label: 'Movers',  description: 'Biggest gainers & losers since last poll' },
+  { value: 'records', label: 'Records', description: 'Games hitting new player count highs' },
 ];
 
 export default function LeaderboardViewFilter({ value, onChange }) {

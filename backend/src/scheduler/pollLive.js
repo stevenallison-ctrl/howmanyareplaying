@@ -52,6 +52,60 @@ async function backfillNewGame(appid) {
 }
 
 /**
+ * Checks whether any game in leaderboard_cache just broke its 7/30/90-day
+ * player count record and inserts a peak_records row if so.
+ * Runs fire-and-forget after the main transaction commits.
+ */
+async function checkPeakRecords() {
+  const WINDOWS = [7, 30, 90];
+
+  // Find all games whose current CCU exceeds any N-day window max (excl. today)
+  const { rows } = await pool.query(`
+    SELECT
+      lc.appid,
+      lc.current_ccu,
+      MAX(CASE WHEN dp.peak_date > CURRENT_DATE - 7  AND dp.peak_date < CURRENT_DATE THEN dp.peak_ccu END) AS max_7d,
+      MAX(CASE WHEN dp.peak_date > CURRENT_DATE - 30 AND dp.peak_date < CURRENT_DATE THEN dp.peak_ccu END) AS max_30d,
+      MAX(CASE WHEN dp.peak_date > CURRENT_DATE - 90 AND dp.peak_date < CURRENT_DATE THEN dp.peak_ccu END) AS max_90d
+    FROM leaderboard_cache lc
+    JOIN daily_peaks dp ON dp.appid = lc.appid
+    GROUP BY lc.appid, lc.current_ccu
+    HAVING
+      lc.current_ccu > COALESCE(MAX(CASE WHEN dp.peak_date > CURRENT_DATE - 7  AND dp.peak_date < CURRENT_DATE THEN dp.peak_ccu END), 0)
+      OR lc.current_ccu > COALESCE(MAX(CASE WHEN dp.peak_date > CURRENT_DATE - 30 AND dp.peak_date < CURRENT_DATE THEN dp.peak_ccu END), 0)
+      OR lc.current_ccu > COALESCE(MAX(CASE WHEN dp.peak_date > CURRENT_DATE - 90 AND dp.peak_date < CURRENT_DATE THEN dp.peak_ccu END), 0)
+  `);
+
+  if (rows.length === 0) return;
+
+  const windowKeys = { 7: 'max_7d', 30: 'max_30d', 90: 'max_90d' };
+  let inserted = 0;
+
+  for (const row of rows) {
+    for (const days of WINDOWS) {
+      const prevMax = row[windowKeys[days]];
+      if (row.current_ccu <= (prevMax ?? 0)) continue;
+
+      // Only one record per appid+window per UTC day
+      const { rowCount } = await pool.query(
+        `INSERT INTO peak_records (appid, window_days, ccu)
+         SELECT $1, $2, $3
+         WHERE NOT EXISTS (
+           SELECT 1 FROM peak_records
+           WHERE appid = $1 AND window_days = $2 AND record_at::date = CURRENT_DATE
+         )`,
+        [row.appid, days, row.current_ccu],
+      );
+      inserted += rowCount;
+    }
+  }
+
+  if (inserted > 0) {
+    logger.info(`[pollLive] ${inserted} new peak record(s) logged`);
+  }
+}
+
+/**
  * Core poll job — runs every 60 minutes.
  * 1. Fetches top 100 games from Steam (rank order).
  * 2. Upserts metadata for any new games.
@@ -167,7 +221,12 @@ export async function pollLive() {
     client.release();
   }
 
-  // 6. Retroactive history backfill for brand-new games (fire and forget)
+  // 6. Check for new N-day peak records (fire and forget)
+  checkPeakRecords().catch((err) =>
+    logger.warn('[pollLive] peak records check failed:', err.message),
+  );
+
+  // 7. Retroactive history backfill for brand-new games (fire and forget)
   for (const appid of newGameIds) {
     backfillNewGame(appid).catch((err) =>
       logger.warn(`[pollLive] retroactive backfill failed for ${appid}: ${err.message}`),

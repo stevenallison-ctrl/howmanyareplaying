@@ -1,14 +1,14 @@
 import React from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
+  Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import ChartTooltip from './ChartTooltip.jsx';
 import { formatAxisDate } from '../../utils/formatDate.js';
 import { formatCompact } from '../../utils/formatNumber.js';
 import './CcuAreaChart.css';
 
-export default function CcuAreaChart({ data, range }) {
+export default function CcuAreaChart({ data, range, allTimePeak }) {
   if (!data || data.length === 0) {
     return <div className="chart-empty">No data for this range yet.</div>;
   }
@@ -40,6 +40,15 @@ export default function CcuAreaChart({ data, range }) {
             width={52}
           />
           <Tooltip content={<ChartTooltip range={range} />} />
+          {allTimePeak != null && (
+            <ReferenceLine
+              y={allTimePeak}
+              stroke="#66c0f4"
+              strokeDasharray="5 4"
+              strokeOpacity={0.45}
+              label={{ value: `All-time: ${formatCompact(allTimePeak)}`, position: 'insideTopRight', fill: '#8ba5be', fontSize: 11 }}
+            />
+          )}
           <Area
             type="monotone"
             dataKey="ccu"

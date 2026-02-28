@@ -43,7 +43,10 @@ export default function CountdownTimer({ lastUpdatedAt, onRefetch }) {
   return (
     <div className="countdown-timer" title="Time until next CCU refresh">
       <span className="countdown-timer__label">Next update in</span>
-      <span className={`countdown-timer__value${seconds === 0 ? ' countdown-timer__value--refreshing' : ''}`}>
+      <span
+        key={seconds}
+        className={`countdown-timer__value${seconds === 0 ? ' countdown-timer__value--refreshing' : ''}`}
+      >
         {seconds === 0 ? 'Refreshing\u2026' : formatCountdown(seconds)}
       </span>
     </div>

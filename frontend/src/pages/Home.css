@@ -49,3 +49,8 @@
 .home-data-notice strong {
   color: var(--color-accent);
 }
+
+@media (max-width: 600px) {
+  .home-header { flex-direction: column; align-items: flex-start; }
+  .home-header__right { width: 100%; justify-content: space-between; }
+}

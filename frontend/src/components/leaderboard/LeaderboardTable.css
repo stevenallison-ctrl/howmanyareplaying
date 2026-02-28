@@ -28,3 +28,8 @@
 .leaderboard-table th.col-ccu,
 .leaderboard-table th.col-peak,
 .leaderboard-table th.col-trend { text-align: right; padding-right: 16px; }
+
+@media (max-width: 640px) {
+  .leaderboard-table th.col-peak,
+  .leaderboard-table th.col-trend { display: none; }
+}

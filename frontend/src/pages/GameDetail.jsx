@@ -67,6 +67,9 @@ export default function GameDetail() {
             <h1 className="game-hero__name">{game.name}</h1>
             <p className="game-hero__appid">App ID: {game.appid}</p>
             <div className="game-hero__stats">
+              {game.rank != null && (
+                <StatBadge label="Live Rank" value={`#${game.rank}`} />
+              )}
               {game.current_ccu != null && (
                 <StatBadge label="Current Players" value={formatNumber(game.current_ccu)} />
               )}
@@ -90,7 +93,7 @@ export default function GameDetail() {
         {historyLoading && <Spinner />}
         {historyError && <ErrorBanner message={historyError} />}
         {!historyLoading && historyData && (
-          <CcuAreaChart data={historyData} range={safeRange} />
+          <CcuAreaChart data={historyData} range={safeRange} allTimePeak={allTimePeak} />
         )}
       </div>
     </div>

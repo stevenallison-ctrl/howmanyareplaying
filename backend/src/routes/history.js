@@ -33,17 +33,17 @@ router.get('/:appid', asyncHandler(async (req, res) => {
        ORDER BY peak_date ASC`,
       [appid],
     ));
-  } else if (range === 'year') {
+  } else if (range === 'week') {
     ({ rows } = await pool.query(
       `SELECT peak_ccu AS ccu, peak_date AS time
        FROM daily_peaks
        WHERE appid = $1
-         AND peak_date >= CURRENT_DATE - INTERVAL '365 days'
+         AND peak_date > CURRENT_DATE - INTERVAL '7 days'
        ORDER BY peak_date ASC`,
       [appid],
     ));
   } else {
-    return res.status(400).json({ error: 'range must be day, month, or year' });
+    return res.status(400).json({ error: 'range must be day, week, or month' });
   }
 
   res.json({ appid, range, data: rows });

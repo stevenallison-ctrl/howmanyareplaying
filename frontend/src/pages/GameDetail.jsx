@@ -14,10 +14,12 @@ export default function GameDetail() {
   const { appid } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const range = searchParams.get('range') ?? 'day';
+  const VALID_RANGES = new Set(['day', 'week', 'month']);
+  const safeRange = VALID_RANGES.has(range) ? range : 'day';
 
   const [game, setGame] = useState(null);
   const [gameError, setGameError] = useState(null);
-  const { data: historyData, loading: historyLoading, error: historyError } = useHistory(appid, range);
+  const { data: historyData, loading: historyLoading, error: historyError } = useHistory(appid, safeRange);
 
   useEffect(() => {
     api.getGame(appid)
@@ -26,7 +28,7 @@ export default function GameDetail() {
   }, [appid]);
 
   const handleRangeChange = (newRange) => {
-    setSearchParams({ range: newRange });
+    setSearchParams({ range: newRange }, { replace: true });
   };
 
   const currentCcu = historyData?.[historyData.length - 1]?.ccu ?? null;
@@ -34,7 +36,7 @@ export default function GameDetail() {
 
   return (
     <div className="game-detail-page">
-      <Link to="/" className="back-link">← Back to Leaderboard</Link>
+      <Link to="/" replace className="back-link">← Back to Leaderboard</Link>
 
       {gameError && <ErrorBanner message={gameError} />}
 
@@ -59,20 +61,20 @@ export default function GameDetail() {
           <StatBadge label="Current Players" value={formatNumber(currentCcu)} />
         )}
         {peakCcu != null && (
-          <StatBadge label={`Peak (${range === 'day' ? '24h' : range === 'month' ? '30d' : '1y'})`} value={formatNumber(peakCcu)} />
+          <StatBadge label={`Peak (${safeRange === 'day' ? '24h' : safeRange === 'week' ? '7d' : '30d'})`} value={formatNumber(peakCcu)} />
         )}
       </div>
 
       <div className="chart-section">
         <div className="chart-section__header">
           <h2 className="chart-section__title">Player Count History</h2>
-          <TimeRangeFilter value={range} onChange={handleRangeChange} />
+          <TimeRangeFilter value={safeRange} onChange={handleRangeChange} />
         </div>
 
         {historyLoading && <Spinner />}
         {historyError && <ErrorBanner message={historyError} />}
         {!historyLoading && historyData && (
-          <CcuAreaChart data={historyData} range={range} />
+          <CcuAreaChart data={historyData} range={safeRange} />
         )}
       </div>
     </div>

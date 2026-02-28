@@ -1,18 +1,20 @@
 /**
- * One-time backfill script — discovers the top 500 Steam games via
- * SteamCharts and imports up to 365 days of daily peak CCU for each.
+ * One-time backfill script — imports up to 365 days of daily peak CCU
+ * from SteamCharts for all known games.
+ *
+ * Discovery sources (combined, deduplicated):
+ *  1. All games already in the DB (captured by the live poll).
+ *  2. Steam's GetMostPlayedGames API — current top 100.
  *
  * Steps:
- *  1. Scrape steamcharts.com/top pages 1-5 to collect ~500 app IDs.
+ *  1. Collect app IDs from DB + Steam API.
  *  2. Upsert game metadata (name + header image) for any new games.
- *  3. Fetch chart-data.json per game and insert into daily_peaks
- *     using GREATEST conflict resolution (never overwrites better data).
+ *  3. Fetch chart-data.json per game from SteamCharts and insert into
+ *     daily_peaks using GREATEST conflict resolution.
  *
- * Going forward, the hourly live poll and extended poll keep data fresh.
- * SteamCharts backfill data ages out of 90d/180d windows naturally as
- * our own collected snapshots accumulate.
+ * Safe to re-run — existing data is never overwritten with lower values.
  *
- * Run once on the server after deploying:
+ * Run on the server:
  *   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
  *     exec backend node src/scripts/backfillHistory.js
  */
@@ -23,47 +25,49 @@ import { fetchAppDetails } from '../services/steamApi.js';
 import { upsertGameMeta } from '../services/gameCache.js';
 import logger from '../utils/logger.js';
 
-const STEAMCHARTS_TOP  = 'https://steamcharts.com/top';
+const STEAM_TOP_URL    = 'https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/?format=json';
 const STEAMCHARTS_DATA = 'https://steamcharts.com/app';
 const DAYS_BACK        = 365;
-const PAGE_DELAY_MS    = 2000;   // between top-page fetches
 const GAME_DELAY_MS    = 1500;   // between per-game history fetches
 const META_DELAY_MS    = 300;    // between Steam metadata fetches
-const TOP_PAGES        = 5;      // pages 1-5 ≈ top 500 games
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ─── Step 1: Collect app IDs from SteamCharts top pages ──────────────────────
+// ─── Step 1: Collect app IDs from DB + Steam API ─────────────────────────────
 
 async function fetchTopAppIds() {
   const appIds = new Set();
 
-  for (let p = 1; p <= TOP_PAGES; p++) {
-    const url = p === 1 ? STEAMCHARTS_TOP : `${STEAMCHARTS_TOP}/p${p}`;
-    try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'howmanyareplaying.com/backfill' },
-      });
-      if (!res.ok) {
-        logger.warn(`[backfill] Top page ${p}: HTTP ${res.status} — skipping`);
-        continue;
-      }
-      const html = await res.text();
-      // App IDs appear as href="/app/{appid}" throughout the page
-      const matches = html.matchAll(/href="\/app\/(\d+)"/g);
-      for (const [, id] of matches) {
-        appIds.add(parseInt(id, 10));
-      }
-      logger.info(`[backfill] Page ${p} scraped — ${appIds.size} unique app IDs so far`);
-    } catch (err) {
-      logger.error(`[backfill] Top page ${p} fetch failed: ${err.message}`);
-    }
-    await sleep(PAGE_DELAY_MS);
+  // Source A: all games already tracked in the DB
+  try {
+    const { rows } = await pool.query('SELECT appid FROM games');
+    for (const { appid } of rows) appIds.add(appid);
+    logger.info(`[backfill] ${rows.length} app IDs from DB`);
+  } catch (err) {
+    logger.error(`[backfill] DB query failed: ${err.message}`);
   }
 
-  logger.info(`[backfill] Discovered ${appIds.size} total app IDs`);
+  // Source B: Steam's current top 100
+  try {
+    const url = process.env.STEAM_API_KEY
+      ? `${STEAM_TOP_URL}&key=${process.env.STEAM_API_KEY}`
+      : STEAM_TOP_URL;
+    const res = await fetch(url);
+    if (res.ok) {
+      const json = await res.json();
+      const ranks = json?.response?.ranks ?? [];
+      for (const { appid } of ranks) appIds.add(appid);
+      logger.info(`[backfill] ${ranks.length} app IDs from Steam API`);
+    } else {
+      logger.warn(`[backfill] Steam API returned ${res.status}`);
+    }
+  } catch (err) {
+    logger.warn(`[backfill] Steam API fetch failed: ${err.message}`);
+  }
+
+  logger.info(`[backfill] ${appIds.size} unique app IDs to process`);
   return [...appIds];
 }
 

@@ -4,7 +4,7 @@
  */
 export function formatNumber(n) {
   if (n == null) return '—';
-  return n.toLocaleString('en-US');
+  return Number(n).toLocaleString('en-US');
 }
 
 /**

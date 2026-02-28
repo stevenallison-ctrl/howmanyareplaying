@@ -71,7 +71,7 @@ router.get('/', asyncHandler(async (req, res) => {
     SELECT
       ROW_NUMBER() OVER (ORDER BY ROUND(AVG(dp.peak_ccu)) DESC) AS rank,
       dp.appid,
-      ROUND(AVG(dp.peak_ccu))                                   AS ccu,
+      ROUND(AVG(dp.peak_ccu))::integer                          AS ccu,
       COUNT(DISTINCT dp.peak_date)                              AS data_days,
       MIN(dp.peak_date)                                         AS earliest_date,
       g.name,

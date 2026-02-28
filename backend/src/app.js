@@ -14,6 +14,12 @@ export function createApp() {
   // Health check
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
+  // Prevent Cloudflare and other proxies from caching API responses
+  app.use('/api', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store');
+    next();
+  });
+
   // API routes
   app.use(apiRouter);
 

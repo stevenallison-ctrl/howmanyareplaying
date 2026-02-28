@@ -61,12 +61,18 @@ router.get('/', asyncHandler(async (req, res) => {
 
   // Historical average views: 7d / 30d / 90d / 180d / 365d
   // Use > (not >=) so "7d" means exactly the last 7 calendar days.
+  //
+  // Rank by SUM(peak_ccu) / period_days rather than AVG(peak_ccu).
+  // AVG only divides by days-with-data, so a game that launched last month
+  // can outrank games present the whole year on a launch spike.
+  // Dividing by the full period length treats missing days as zero —
+  // games not present for the whole window are ranked proportionally lower.
   const days = parseInt(view, 10);
   const { rows } = await pool.query(`
     SELECT
-      ROW_NUMBER() OVER (ORDER BY ROUND(AVG(dp.peak_ccu)) DESC) AS rank,
+      ROW_NUMBER() OVER (ORDER BY ROUND(SUM(dp.peak_ccu)::numeric / ${days}) DESC) AS rank,
       dp.appid,
-      ROUND(AVG(dp.peak_ccu))                                   AS ccu,
+      ROUND(SUM(dp.peak_ccu)::numeric / ${days})                AS ccu,
       COUNT(DISTINCT dp.peak_date)                              AS data_days,
       MIN(dp.peak_date)                                         AS earliest_date,
       g.name,

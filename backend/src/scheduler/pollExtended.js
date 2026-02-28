@@ -46,7 +46,7 @@ export async function pollExtended() {
   for (const { appid, name } of games) {
     try {
       const ccu = await fetchGameCCU(appid);
-      if (ccu === null || ccu < 0) {
+      if (ccu === null) {
         failed++;
         await sleep(DELAY_MS);
         continue;

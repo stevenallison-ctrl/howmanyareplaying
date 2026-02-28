@@ -32,19 +32,22 @@ async function backfillNewGame(appid) {
   }
   delete byDate[today]; // live poll owns today's row
 
-  for (const [date, peak_ccu] of Object.entries(byDate)) {
+  const entries = Object.entries(byDate);
+  if (entries.length > 0) {
+    const dates = entries.map(([date]) => date);
+    const ccus  = entries.map(([, ccu]) => Math.round(ccu));
     await pool.query(
       `INSERT INTO daily_peaks (appid, peak_date, peak_ccu)
-       VALUES ($1, $2, $3)
+       SELECT $1, unnest($2::date[]), unnest($3::integer[])
        ON CONFLICT (appid, peak_date)
        DO UPDATE SET peak_ccu = GREATEST(daily_peaks.peak_ccu, EXCLUDED.peak_ccu)`,
-      [appid, date, Math.round(peak_ccu)],
+      [appid, dates, ccus],
     );
   }
 
   logger.info(
     `[pollLive] retroactive backfill complete for ${appid} — ` +
-    `${Object.keys(byDate).length} days inserted`,
+    `${entries.length} days inserted`,
   );
 }
 

@@ -117,7 +117,7 @@ function toDailyPeaks(entries) {
   return byDate;
 }
 
-async function backfillGame(appid, name, today) {
+async function backfillGame(appid, today) {
   const raw = await fetchChartData(appid);
   if (!Array.isArray(raw) || raw.length === 0) return 0;
 
@@ -125,15 +125,21 @@ async function backfillGame(appid, name, today) {
   delete byDate[today]; // live poll owns today's row
 
   const entries = Object.entries(byDate);
-  for (const [date, peak_ccu] of entries) {
-    await pool.query(
-      `INSERT INTO daily_peaks (appid, peak_date, peak_ccu)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (appid, peak_date)
-       DO UPDATE SET peak_ccu = GREATEST(daily_peaks.peak_ccu, EXCLUDED.peak_ccu)`,
-      [appid, date, Math.round(peak_ccu)],
-    );
-  }
+  if (entries.length === 0) return 0;
+
+  // Batch all rows for this game into a single query using UNNEST —
+  // avoids ~365 round-trips per game over a cloud DB connection.
+  const dates  = entries.map(([date]) => date);
+  const ccus   = entries.map(([, ccu]) => Math.round(ccu));
+
+  await pool.query(
+    `INSERT INTO daily_peaks (appid, peak_date, peak_ccu)
+     SELECT $1, unnest($2::date[]), unnest($3::integer[])
+     ON CONFLICT (appid, peak_date)
+     DO UPDATE SET peak_ccu = GREATEST(daily_peaks.peak_ccu, EXCLUDED.peak_ccu)`,
+    [appid, dates, ccus],
+  );
+
   return entries.length;
 }
 
@@ -167,7 +173,7 @@ async function backfill() {
       const name = rows[0]?.name ?? `App ${appid}`;
 
       logger.info(`[backfill] Fetching history for ${name} (${appid})`);
-      const rowCount = await backfillGame(appid, name, today);
+      const rowCount = await backfillGame(appid, today);
 
       if (rowCount > 0) {
         logger.info(`[backfill] Upserted ${rowCount} days for ${name}`);

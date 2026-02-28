@@ -9,17 +9,10 @@ function getSecondsRemaining(lastUpdatedAt) {
   return Math.max(0, Math.floor((nextPollAt - Date.now()) / 1000));
 }
 
-function formatCountdown(totalSeconds) {
-  if (totalSeconds === null) return '--:--';
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
 export default function CountdownTimer({ lastUpdatedAt, onRefetch }) {
   const [seconds, setSeconds] = useState(() => getSecondsRemaining(lastUpdatedAt));
   const onRefetchRef = useRef(onRefetch);
-  const valueRef     = useRef(null);
+  const secsRef      = useRef(null);
   onRefetchRef.current = onRefetch;
 
   useEffect(() => {
@@ -41,23 +34,39 @@ export default function CountdownTimer({ lastUpdatedAt, onRefetch }) {
     return () => clearInterval(id);
   }, [lastUpdatedAt]);
 
-  // Restart the CSS animation on every tick via the reflow trick
+  // Restart the seconds animation on every tick.
+  // Double rAF ensures we're in a fresh paint frame after React's DOM commit.
   useEffect(() => {
-    const el = valueRef.current;
+    const el = secsRef.current;
     if (!el) return;
-    el.style.animation = 'none';
-    void el.offsetHeight; // force layout recalc
-    el.style.animation = '';
+    el.classList.remove('tick');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.add('tick');
+      });
+    });
   }, [seconds]);
+
+  if (seconds === 0) {
+    return (
+      <div className="countdown-timer" title="Time until next CCU refresh">
+        <span className="countdown-timer__label">Next update in</span>
+        <span className="countdown-timer__value countdown-timer__value--refreshing">
+          Refreshing&hellip;
+        </span>
+      </div>
+    );
+  }
+
+  const m  = seconds === null ? '--' : String(Math.floor(seconds / 60)).padStart(2, '0');
+  const s  = seconds === null ? '--' : String(seconds % 60).padStart(2, '0');
 
   return (
     <div className="countdown-timer" title="Time until next CCU refresh">
       <span className="countdown-timer__label">Next update in</span>
-      <span
-        ref={valueRef}
-        className={`countdown-timer__value${seconds === 0 ? ' countdown-timer__value--refreshing' : ''}`}
-      >
-        {seconds === 0 ? 'Refreshing\u2026' : formatCountdown(seconds)}
+      <span className="countdown-timer__value">
+        <span className="countdown-timer__mins">{m}:</span>
+        <span ref={secsRef} className="countdown-timer__secs tick">{s}</span>
       </span>
     </div>
   );

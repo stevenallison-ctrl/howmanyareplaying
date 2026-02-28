@@ -12,17 +12,6 @@
   letter-spacing: 0.05em;
 }
 
-@keyframes tick-in {
-  from {
-    opacity: 0.35;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .countdown-timer__value {
   font-size: 18px;
   font-weight: 700;
@@ -30,7 +19,6 @@
   color: var(--color-accent);
   font-family: var(--font-mono);
   letter-spacing: 0.02em;
-  animation: tick-in 0.2s ease-out;
 }
 
 .countdown-timer__value--refreshing {
@@ -38,4 +26,19 @@
   font-size: 13px;
   font-weight: 400;
   font-family: var(--font-sans);
+}
+
+.countdown-timer__mins {
+  opacity: 0.75;
+}
+
+@keyframes tick-in {
+  0%   { opacity: 0.1; transform: translateY(-8px); }
+  60%  { opacity: 1;   transform: translateY(1px);  }
+  100% { opacity: 1;   transform: translateY(0);    }
+}
+
+.countdown-timer__secs.tick {
+  display: inline-block;
+  animation: tick-in 0.35s ease-out forwards;
 }

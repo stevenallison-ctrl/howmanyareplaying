@@ -91,6 +91,32 @@ export async function fetchAppDetails(appid) {
 }
 
 /**
+ * Fetches actual concurrent player counts for multiple appids in parallel.
+ * Batches 10 requests at a time. Appids where the fetch fails are omitted
+ * from the returned Map.
+ * @param {number[]} appids
+ * @returns {Promise<Map<number, number>>}
+ */
+export async function fetchCurrentPlayers(appids) {
+  const BATCH_SIZE = 10;
+  const result = new Map();
+  for (let i = 0; i < appids.length; i += BATCH_SIZE) {
+    const batch = appids.slice(i, i + BATCH_SIZE);
+    const settled = await Promise.allSettled(
+      batch.map((appid) =>
+        fetchGameCCU(appid).then((count) => ({ appid, count })),
+      ),
+    );
+    for (const r of settled) {
+      if (r.status === 'fulfilled' && r.value.count != null) {
+        result.set(r.value.appid, r.value.count);
+      }
+    }
+  }
+  return result;
+}
+
+/**
  * Fetches the top 100 most-wishlisted games on Steam.
  * Makes 4 sequential page requests (25 items each) and deduplicates.
  * @returns {Promise<Array<{rank: number, appid: number, name: string, logo: string}>>}

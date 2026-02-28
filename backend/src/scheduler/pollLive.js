@@ -1,5 +1,5 @@
 import pool from '../db/pool.js';
-import { fetchTopGames, fetchAppDetails } from '../services/steamApi.js';
+import { fetchTopGames, fetchAppDetails, fetchCurrentPlayers } from '../services/steamApi.js';
 import { upsertGameMeta } from '../services/gameCache.js';
 import logger from '../utils/logger.js';
 
@@ -53,12 +53,13 @@ async function backfillNewGame(appid) {
 
 /**
  * Core poll job — runs every 60 minutes.
- * 1. Fetches top 100 games from Steam.
- * 2. Upserts metadata for any new games (batched Steam API calls).
- * 3. Inserts CCU snapshots.
- * 4. Upserts daily peaks.
- * 5. Rebuilds leaderboard_cache atomically.
- * 6. Fire-and-forget retroactive history backfill for brand-new games.
+ * 1. Fetches top 100 games from Steam (rank order).
+ * 2. Upserts metadata for any new games.
+ * 3. Fetches actual concurrent player counts from GetNumberOfCurrentPlayers.
+ * 4. Inserts CCU snapshots (real-time counts).
+ * 5. Upserts daily peaks (real-time counts, GREATEST wins).
+ * 6. Rebuilds leaderboard_cache atomically with real-time counts.
+ * 7. Fire-and-forget retroactive history backfill for brand-new games.
  */
 export async function pollLive() {
   const start = Date.now();
@@ -72,50 +73,59 @@ export async function pollLive() {
     return;
   }
 
+  // 1. Ensure all games exist in DB; fetch metadata for new ones.
+  // Done outside the transaction so HTTP calls don't hold a connection open.
   const newGameIds = [];
+  for (const { appid } of ranks) {
+    const { rows } = await pool.query(
+      'SELECT appid FROM games WHERE appid = $1',
+      [appid],
+    );
+    if (rows.length === 0) {
+      const details      = await fetchAppDetails(appid);
+      const name         = details?.name         ?? `App ${appid}`;
+      const header_image = details?.header_image ?? null;
+      const release_date = details?.release_date ?? null;
+      await upsertGameMeta(appid, name, header_image, release_date);
+      newGameIds.push(appid);
+    }
+  }
+
+  // 2. Fetch real-time concurrent player counts for all ranked games.
+  // GetMostPlayedGames returns peak_in_game which is a weekly peak, not the
+  // current count. We use GetNumberOfCurrentPlayers for accurate live data.
+  const appids = ranks.map((r) => r.appid);
+  const currentPlayerMap = await fetchCurrentPlayers(appids);
+  logger.info(`[pollLive] fetched real-time counts for ${currentPlayerMap.size}/${appids.length} games`);
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // 1. Ensure all games exist in DB; fetch metadata for new ones.
-    for (const { appid } of ranks) {
-      const { rows } = await client.query(
-        'SELECT appid FROM games WHERE appid = $1',
-        [appid],
-      );
-      if (rows.length === 0) {
-        // New game — fetch details from Steam
-        const details      = await fetchAppDetails(appid);
-        const name         = details?.name         ?? `App ${appid}`;
-        const header_image = details?.header_image ?? null;
-        const release_date = details?.release_date ?? null;
-        await upsertGameMeta(appid, name, header_image, release_date);
-        newGameIds.push(appid); // mark for retroactive backfill
-      }
-    }
-
-    // 2. Insert CCU snapshots
+    // 3. Insert CCU snapshots (real-time counts)
     for (const { appid, peak_in_game } of ranks) {
+      const ccu = currentPlayerMap.get(appid) ?? peak_in_game;
       await client.query(
         'INSERT INTO ccu_snapshots (appid, ccu) VALUES ($1, $2)',
-        [appid, peak_in_game],
+        [appid, ccu],
       );
     }
 
-    // 3. Upsert daily peaks
+    // 4. Upsert daily peaks (real-time counts, GREATEST wins across polls)
     const today = new Date().toISOString().slice(0, 10);
     for (const { appid, peak_in_game } of ranks) {
+      const ccu = currentPlayerMap.get(appid) ?? peak_in_game;
       await client.query(
         `INSERT INTO daily_peaks (appid, peak_date, peak_ccu)
          VALUES ($1, $2, $3)
          ON CONFLICT (appid, peak_date)
          DO UPDATE SET peak_ccu = GREATEST(daily_peaks.peak_ccu, EXCLUDED.peak_ccu)`,
-        [appid, today, peak_in_game],
+        [appid, today, ccu],
       );
     }
 
-    // 4. Rebuild leaderboard_cache atomically
-    // Snapshot current CCU values before wiping, so we can compute trend delta
+    // 5. Rebuild leaderboard_cache atomically.
+    // Snapshot current CCU values before wiping, so we can compute trend delta.
     const { rows: prevRows } = await client.query(
       'SELECT appid, current_ccu FROM leaderboard_cache',
     );
@@ -123,12 +133,13 @@ export async function pollLive() {
 
     await client.query('DELETE FROM leaderboard_cache');
     for (const { rank, appid, peak_in_game } of ranks) {
+      const currentCcu = currentPlayerMap.get(appid) ?? peak_in_game;
       const { rows: peakRows } = await client.query(
         `SELECT GREATEST(MAX(ccu), $1) AS peak_24h
          FROM ccu_snapshots
          WHERE appid = $2
            AND captured_at >= NOW() - INTERVAL '24 hours'`,
-        [peak_in_game, appid],
+        [currentCcu, appid],
       );
       const peak_24h = peakRows[0].peak_24h;
       const prev_ccu = prevCcuMap.get(appid) ?? null;
@@ -142,7 +153,7 @@ export async function pollLive() {
                peak_24h        = EXCLUDED.peak_24h,
                prev_ccu        = EXCLUDED.prev_ccu,
                last_updated_at = NOW()`,
-        [rank, appid, peak_in_game, peak_24h, prev_ccu],
+        [rank, appid, currentCcu, peak_24h, prev_ccu],
       );
     }
 
@@ -156,7 +167,7 @@ export async function pollLive() {
     client.release();
   }
 
-  // 5. Retroactive history backfill for brand-new games (fire and forget)
+  // 6. Retroactive history backfill for brand-new games (fire and forget)
   for (const appid of newGameIds) {
     backfillNewGame(appid).catch((err) =>
       logger.warn(`[pollLive] retroactive backfill failed for ${appid}: ${err.message}`),

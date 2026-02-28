@@ -1,123 +1,191 @@
 /**
- * One-time backfill script — imports historical daily peak CCU from SteamCharts.
+ * One-time backfill script — discovers the top 500 Steam games via
+ * SteamCharts and imports up to 365 days of daily peak CCU for each.
  *
- * Data source: https://steamcharts.com/app/{appid}/chart-data.json
- *   - Returns [[timestamp_ms, avg_ccu], ...] pairs
- *   - Recent data (~12 months) is hourly → we take max per day as daily peak
- *   - Older data is monthly averages → one entry per month used as-is
+ * Steps:
+ *  1. Scrape steamcharts.com/top pages 1-5 to collect ~500 app IDs.
+ *  2. Upsert game metadata (name + header image) for any new games.
+ *  3. Fetch chart-data.json per game and insert into daily_peaks
+ *     using GREATEST conflict resolution (never overwrites better data).
  *
- * Inserts into daily_peaks using GREATEST conflict resolution so it never
- * overwrites better data already collected by the live poll.
+ * Going forward, the hourly live poll and extended poll keep data fresh.
+ * SteamCharts backfill data ages out of 90d/180d windows naturally as
+ * our own collected snapshots accumulate.
  *
- * Run once on the server:
+ * Run once on the server after deploying:
  *   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
  *     exec backend node src/scripts/backfillHistory.js
  */
 
 import 'dotenv/config';
 import pool from '../db/pool.js';
+import { fetchAppDetails } from '../services/steamApi.js';
+import { upsertGameMeta } from '../services/gameCache.js';
 import logger from '../utils/logger.js';
 
-const STEAMCHARTS_URL = 'https://steamcharts.com/app';
-const DAYS_BACK = 365;
-const DELAY_MS = 1500; // 1.5s between requests — be respectful
+const STEAMCHARTS_TOP  = 'https://steamcharts.com/top';
+const STEAMCHARTS_DATA = 'https://steamcharts.com/app';
+const DAYS_BACK        = 365;
+const PAGE_DELAY_MS    = 2000;   // between top-page fetches
+const GAME_DELAY_MS    = 1500;   // between per-game history fetches
+const META_DELAY_MS    = 300;    // between Steam metadata fetches
+const TOP_PAGES        = 5;      // pages 1-5 ≈ top 500 games
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ─── Step 1: Collect app IDs from SteamCharts top pages ──────────────────────
+
+async function fetchTopAppIds() {
+  const appIds = new Set();
+
+  for (let p = 1; p <= TOP_PAGES; p++) {
+    const url = p === 1 ? STEAMCHARTS_TOP : `${STEAMCHARTS_TOP}/p${p}`;
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'howmanyareplaying.com/backfill' },
+      });
+      if (!res.ok) {
+        logger.warn(`[backfill] Top page ${p}: HTTP ${res.status} — skipping`);
+        continue;
+      }
+      const html = await res.text();
+      // App IDs appear as href="/app/{appid}" throughout the page
+      const matches = html.matchAll(/href="\/app\/(\d+)"/g);
+      for (const [, id] of matches) {
+        appIds.add(parseInt(id, 10));
+      }
+      logger.info(`[backfill] Page ${p} scraped — ${appIds.size} unique app IDs so far`);
+    } catch (err) {
+      logger.error(`[backfill] Top page ${p} fetch failed: ${err.message}`);
+    }
+    await sleep(PAGE_DELAY_MS);
+  }
+
+  logger.info(`[backfill] Discovered ${appIds.size} total app IDs`);
+  return [...appIds];
+}
+
+// ─── Step 2: Ensure game metadata exists for each app ID ─────────────────────
+
+async function ensureGames(appIds) {
+  const { rows: existing } = await pool.query('SELECT appid FROM games');
+  const knownIds = new Set(existing.map((r) => r.appid));
+
+  const newIds = appIds.filter((id) => !knownIds.has(id));
+  logger.info(`[backfill] ${newIds.length} new games need metadata`);
+
+  for (const appid of newIds) {
+    try {
+      const details = await fetchAppDetails(appid);
+      const name         = details?.name         ?? `App ${appid}`;
+      const header_image = details?.header_image ?? null;
+      await upsertGameMeta(appid, name, header_image);
+    } catch (err) {
+      logger.warn(`[backfill] Metadata fetch failed for ${appid}: ${err.message}`);
+    }
+    await sleep(META_DELAY_MS);
+  }
+}
+
+// ─── Step 3: Fetch and insert historical CCU data per game ───────────────────
+
 async function fetchChartData(appid) {
-  const url = `${STEAMCHARTS_URL}/${appid}/chart-data.json`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'howmanyareplaying.com data collector' },
+  const res = await fetch(`${STEAMCHARTS_DATA}/${appid}/chart-data.json`, {
+    headers: { 'User-Agent': 'howmanyareplaying.com/backfill' },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
 
 /**
- * Collapse raw [[timestamp_ms, ccu], ...] entries into a
- * { 'YYYY-MM-DD': peak_ccu } map covering the last DAYS_BACK days.
- * Takes the maximum ccu value seen on each calendar day.
+ * Collapses raw [[timestamp_ms, ccu], ...] entries into a
+ * { 'YYYY-MM-DD': peak_ccu } map for the last DAYS_BACK days.
+ * Takes the max value per calendar day so hourly data becomes a daily peak.
  */
 function toDailyPeaks(entries) {
   const cutoffMs = Date.now() - DAYS_BACK * 24 * 60 * 60 * 1000;
-  const byDate = {};
+  const byDate   = {};
 
   for (const [tsMs, ccu] of entries) {
-    if (tsMs < cutoffMs) continue;
-    if (!ccu || ccu <= 0) continue;
-
+    if (tsMs < cutoffMs || !ccu || ccu <= 0) continue;
     const date = new Date(tsMs).toISOString().slice(0, 10);
-    if (!byDate[date] || ccu > byDate[date]) {
-      byDate[date] = ccu;
-    }
+    if (!byDate[date] || ccu > byDate[date]) byDate[date] = ccu;
   }
 
   return byDate;
 }
 
-async function backfill() {
-  const { rows: games } = await pool.query(
-    'SELECT appid, name FROM games ORDER BY appid',
-  );
+async function backfillGame(appid, name, today) {
+  const raw = await fetchChartData(appid);
+  if (!Array.isArray(raw) || raw.length === 0) return 0;
 
-  if (games.length === 0) {
-    logger.info('[backfill] No games in DB yet — run after the first poll completes.');
-    process.exit(0);
+  const byDate = toDailyPeaks(raw);
+  delete byDate[today]; // live poll owns today's row
+
+  const entries = Object.entries(byDate);
+  for (const [date, peak_ccu] of entries) {
+    await pool.query(
+      `INSERT INTO daily_peaks (appid, peak_date, peak_ccu)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (appid, peak_date)
+       DO UPDATE SET peak_ccu = GREATEST(daily_peaks.peak_ccu, EXCLUDED.peak_ccu)`,
+      [appid, date, Math.round(peak_ccu)],
+    );
+  }
+  return entries.length;
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+async function backfill() {
+  logger.info('[backfill] === Starting full backfill ===');
+
+  // Step 1 — discover app IDs
+  const appIds = await fetchTopAppIds();
+  if (appIds.length === 0) {
+    logger.error('[backfill] No app IDs found — aborting');
+    process.exit(1);
   }
 
-  logger.info(`[backfill] Starting backfill for ${games.length} games (${DAYS_BACK} days)`);
+  // Step 2 — ensure all games have metadata in DB
+  await ensureGames(appIds);
 
-  const today = new Date().toISOString().slice(0, 10);
-  let succeeded = 0;
-  let failed = 0;
-  let totalRows = 0;
+  // Step 3 — fetch and insert historical data
+  const today      = new Date().toISOString().slice(0, 10);
+  let succeeded    = 0;
+  let failed       = 0;
+  let totalRows    = 0;
 
-  for (const { appid, name } of games) {
+  for (const appid of appIds) {
     try {
-      logger.info(`[backfill] Fetching ${name} (${appid})`);
-      const raw = await fetchChartData(appid);
+      // Look up name for logging
+      const { rows } = await pool.query(
+        'SELECT name FROM games WHERE appid = $1', [appid],
+      );
+      const name = rows[0]?.name ?? `App ${appid}`;
 
-      if (!Array.isArray(raw) || raw.length === 0) {
-        logger.warn(`[backfill] Empty response for ${appid}`);
-        failed++;
-        await sleep(DELAY_MS);
-        continue;
-      }
+      logger.info(`[backfill] Fetching history for ${name} (${appid})`);
+      const rowCount = await backfillGame(appid, name, today);
 
-      const byDate = toDailyPeaks(raw);
-      // Never touch today — the live poll owns that row
-      delete byDate[today];
-
-      const dates = Object.keys(byDate);
-      if (dates.length === 0) {
-        logger.info(`[backfill] No usable data for ${appid}`);
+      if (rowCount > 0) {
+        logger.info(`[backfill] Upserted ${rowCount} days for ${name}`);
+        totalRows += rowCount;
       } else {
-        for (const [date, peak_ccu] of Object.entries(byDate)) {
-          await pool.query(
-            `INSERT INTO daily_peaks (appid, peak_date, peak_ccu)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (appid, peak_date)
-             DO UPDATE SET peak_ccu = GREATEST(daily_peaks.peak_ccu, EXCLUDED.peak_ccu)`,
-            [appid, date, Math.round(peak_ccu)],
-          );
-        }
-        logger.info(`[backfill] Inserted/updated ${dates.length} days for ${name}`);
-        totalRows += dates.length;
+        logger.info(`[backfill] No usable data for ${appid}`);
       }
-
       succeeded++;
     } catch (err) {
-      logger.error(`[backfill] Failed for ${appid} (${name}): ${err.message}`);
+      logger.error(`[backfill] Failed for ${appid}: ${err.message}`);
       failed++;
     }
-
-    await sleep(DELAY_MS);
+    await sleep(GAME_DELAY_MS);
   }
 
   logger.info(
-    `[backfill] Complete — ${succeeded} games OK, ${failed} failed, ${totalRows} daily_peak rows upserted`,
+    `[backfill] === Complete — ${succeeded} games OK, ${failed} failed, ` +
+    `${totalRows} daily_peak rows upserted ===`,
   );
   await pool.end();
 }

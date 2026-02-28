@@ -6,6 +6,9 @@ const MOST_PLAYED_URL =
 const APP_DETAILS_BASE =
   'https://store.steampowered.com/api/appdetails';
 
+const CURRENT_PLAYERS_BASE =
+  'https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1';
+
 /**
  * Returns the top 100 games with their current CCU.
  * @returns {Promise<Array<{rank: number, appid: number, peak_in_game: number}>>}
@@ -25,6 +28,26 @@ export async function fetchTopGames() {
     throw new Error('Unexpected Steam API response shape');
   }
   return ranks.slice(0, 100);
+}
+
+/**
+ * Returns the current concurrent player count for a single appid.
+ * Uses the public GetNumberOfCurrentPlayers endpoint (no API key needed).
+ * Returns null on failure.
+ * @param {number} appid
+ * @returns {Promise<number|null>}
+ */
+export async function fetchGameCCU(appid) {
+  try {
+    const res = await fetch(`${CURRENT_PLAYERS_BASE}?appid=${appid}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const count = json?.response?.player_count;
+    return typeof count === 'number' && count >= 0 ? count : null;
+  } catch (err) {
+    logger.warn(`[steamApi] fetchGameCCU(${appid}) failed:`, err.message);
+    return null;
+  }
 }
 
 /**

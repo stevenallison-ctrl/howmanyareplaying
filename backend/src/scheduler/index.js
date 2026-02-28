@@ -1,13 +1,20 @@
 import cron from 'node-cron';
 import { pollLive } from './pollLive.js';
+import { pollExtended } from './pollExtended.js';
 import { calcDailyPeak } from './calcDailyPeak.js';
 import { pruneSnapshots } from './prune.js';
 import logger from '../utils/logger.js';
 
 export function registerJobs() {
-  // Poll Steam every 60 minutes
+  // Poll Steam top 100 every 60 minutes at :00
   cron.schedule('0 * * * *', async () => {
     await pollLive();
+  });
+
+  // Poll extended game list (all DB games outside top 100) at :30
+  // Offset from live poll so they don't compete for DB connections
+  cron.schedule('30 * * * *', async () => {
+    await pollExtended();
   });
 
   // Safety-net daily peak aggregation at 23:55 UTC
@@ -20,5 +27,5 @@ export function registerJobs() {
     await pruneSnapshots();
   }, { timezone: 'UTC' });
 
-  logger.info('[scheduler] jobs registered (poll: hourly, peak: 23:55, prune: 01:00)');
+  logger.info('[scheduler] jobs registered (live: :00, extended: :30, peak: 23:55, prune: 01:00)');
 }

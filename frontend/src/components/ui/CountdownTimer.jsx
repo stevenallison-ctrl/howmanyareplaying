@@ -31,7 +31,7 @@ export default function CountdownTimer({ lastUpdatedAt, onRefetch }) {
       setSeconds((prev) => {
         if (prev === null) return null;
         if (prev <= 1) {
-          onRefetchRef.current?.();
+          if (prev === 1) onRefetchRef.current?.();
           return 0;
         }
         return prev - 1;

@@ -16,6 +16,7 @@ export default function SearchBar() {
 
   // Clear on navigation
   useEffect(() => {
+    clearTimeout(timerRef.current);
     setQuery('');
     setResults([]);
     setOpen(false);

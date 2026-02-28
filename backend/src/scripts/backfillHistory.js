@@ -82,10 +82,11 @@ async function ensureGames(appIds) {
 
   for (const appid of newIds) {
     try {
-      const details = await fetchAppDetails(appid);
+      const details      = await fetchAppDetails(appid);
       const name         = details?.name         ?? `App ${appid}`;
       const header_image = details?.header_image ?? null;
-      await upsertGameMeta(appid, name, header_image);
+      const release_date = details?.release_date ?? null;
+      await upsertGameMeta(appid, name, header_image, release_date);
     } catch (err) {
       logger.warn(`[backfill] Metadata fetch failed for ${appid}: ${err.message}`);
     }

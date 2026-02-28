@@ -39,15 +39,16 @@ export async function getGameMeta(appid) {
  * Upserts game metadata into DB and refreshes in-memory cache.
  * Called during the poll job after verifying the name.
  */
-export async function upsertGameMeta(appid, name, header_image) {
+export async function upsertGameMeta(appid, name, header_image, release_date = null) {
   await pool.query(
-    `INSERT INTO games (appid, name, header_image, last_fetched_at)
-     VALUES ($1, $2, $3, NOW())
+    `INSERT INTO games (appid, name, header_image, release_date, last_fetched_at)
+     VALUES ($1, $2, $3, $4, NOW())
      ON CONFLICT (appid) DO UPDATE
        SET name = EXCLUDED.name,
            header_image = COALESCE(EXCLUDED.header_image, games.header_image),
+           release_date = COALESCE(EXCLUDED.release_date, games.release_date),
            last_fetched_at = NOW()`,
-    [appid, name, header_image],
+    [appid, name, header_image, release_date],
   );
   cache.set(appid, { name, header_image, fetchedAt: Date.now() });
 }

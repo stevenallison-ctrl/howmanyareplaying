@@ -51,10 +51,10 @@ export async function fetchGameCCU(appid) {
 }
 
 /**
- * Fetches basic metadata (name + header_image) for a single appid.
+ * Fetches basic metadata (name, header_image, release_date) for a single appid.
  * Returns null if the app is not found or the API call fails.
  * @param {number} appid
- * @returns {Promise<{name: string, header_image: string} | null>}
+ * @returns {Promise<{name: string, header_image: string|null, release_date: string|null} | null>}
  */
 export async function fetchAppDetails(appid) {
   try {
@@ -65,9 +65,20 @@ export async function fetchAppDetails(appid) {
     const json = await res.json();
     const data = json?.[appid]?.data;
     if (!data) return null;
+
+    let release_date = null;
+    const rd = data.release_date;
+    if (rd && !rd.coming_soon && rd.date) {
+      const parsed = new Date(rd.date);
+      if (!isNaN(parsed.getTime())) {
+        release_date = parsed.toISOString().slice(0, 10);
+      }
+    }
+
     return {
       name: data.name ?? `App ${appid}`,
       header_image: data.header_image ?? null,
+      release_date,
     };
   } catch (err) {
     logger.warn(`[steamApi] fetchAppDetails(${appid}) failed:`, err.message);

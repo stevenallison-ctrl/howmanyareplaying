@@ -85,10 +85,11 @@ export async function pollLive() {
       );
       if (rows.length === 0) {
         // New game — fetch details from Steam
-        const details = await fetchAppDetails(appid);
+        const details      = await fetchAppDetails(appid);
         const name         = details?.name         ?? `App ${appid}`;
         const header_image = details?.header_image ?? null;
-        await upsertGameMeta(appid, name, header_image);
+        const release_date = details?.release_date ?? null;
+        await upsertGameMeta(appid, name, header_image, release_date);
         newGameIds.push(appid); // mark for retroactive backfill
       }
     }

@@ -18,7 +18,7 @@ function CompareTooltip({ active, payload, label }) {
         })}
       </div>
       {payload.map((entry) => (
-        <div key={entry.dataKey} className="chart-tooltip__value">
+        <div key={entry.dataKey} className="chart-tooltip__value" style={{ color: entry.color }}>
           <span
             className="chart-tooltip__dot"
             style={{ background: entry.color }}

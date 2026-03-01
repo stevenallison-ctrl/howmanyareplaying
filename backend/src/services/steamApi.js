@@ -1,7 +1,7 @@
 import logger from '../utils/logger.js';
 
 const WISHLIST_BASE =
-  'https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Wishlisted_DESC&json=1&count=25&ndl=1';
+  'https://store.steampowered.com/search/results/?filter=popularwishlist&json=1&count=25&ndl=1';
 const APPID_FROM_LOGO = /steam\/apps\/(\d+)\//;
 
 const MOST_PLAYED_URL =

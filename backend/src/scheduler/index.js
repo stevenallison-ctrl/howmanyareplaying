@@ -3,6 +3,7 @@ import { pollLive } from './pollLive.js';
 import { pollExtended } from './pollExtended.js';
 import { calcDailyPeak } from './calcDailyPeak.js';
 import { pruneSnapshots } from './prune.js';
+import { pollNews } from './pollNews.js';
 import logger from '../utils/logger.js';
 
 export function registerJobs() {
@@ -27,5 +28,12 @@ export function registerJobs() {
     await pruneSnapshots();
   }, { timezone: 'UTC' });
 
-  logger.info('[scheduler] jobs registered (live: :00, extended: :30, peak: 23:55, prune: 01:00)');
+  // Scrape gaming news RSS feeds daily at 09:00 America/New_York
+  cron.schedule('0 9 * * *', async () => {
+    await pollNews().catch((err) =>
+      logger.error('[pollNews] cron failed:', err.message),
+    );
+  }, { timezone: 'America/New_York' });
+
+  logger.info('[scheduler] jobs registered (live: :00, extended: :30, peak: 23:55, prune: 01:00, news: 09:00 EST)');
 }

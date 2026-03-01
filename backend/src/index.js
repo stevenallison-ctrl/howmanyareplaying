@@ -3,8 +3,10 @@ import { runMigrations } from './db/migrate.js';
 import { warmCache } from './services/gameCache.js';
 import { registerJobs } from './scheduler/index.js';
 import { pollLive } from './scheduler/pollLive.js';
+import { pollNews } from './scheduler/pollNews.js';
 import { createApp } from './app.js';
 import logger from './utils/logger.js';
+import pool from './db/pool.js';
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
@@ -21,7 +23,15 @@ async function main() {
   // 4. Do an immediate poll so data is available on first request
   await pollLive();
 
-  // 5. Start HTTP server
+  // 5. On first deploy, run news scrape immediately (table will be empty)
+  const { rows } = await pool.query('SELECT 1 FROM news_articles LIMIT 1');
+  if (rows.length === 0) {
+    pollNews().catch((err) =>
+      logger.warn('[pollNews] initial scrape failed:', err.message),
+    );
+  }
+
+  // 6. Start HTTP server
   const app = createApp();
   app.listen(PORT, () => {
     logger.info(`[server] listening on port ${PORT}`);

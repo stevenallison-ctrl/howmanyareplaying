@@ -7,6 +7,7 @@ import wishlistRouter from './wishlist.js';
 import searchRouter from './search.js';
 import moversRouter from './movers.js';
 import recordsRouter from './records.js';
+import newsRouter from './news.js';
 import sitemapRouter from './sitemap.js';
 
 const router = Router();
@@ -19,6 +20,7 @@ router.use('/api/wishlist', wishlistRouter);
 router.use('/api/search', searchRouter);
 router.use('/api/movers', moversRouter);
 router.use('/api/records', recordsRouter);
+router.use('/api/news', newsRouter);
 router.use('/sitemap.xml', sitemapRouter);
 
 export default router;

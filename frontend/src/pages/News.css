@@ -1,0 +1,29 @@
+.news-page {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+.news-page__header {
+  margin-bottom: 28px;
+}
+
+.news-page__title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.news-page__subtitle {
+  font-size: 14px;
+  color: var(--color-text-dim);
+  margin: 0;
+}
+
+.news-page__empty {
+  font-size: 14px;
+  color: var(--color-text-dim);
+  padding: 24px 0;
+  text-align: center;
+}

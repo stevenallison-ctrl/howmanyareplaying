@@ -9,6 +9,7 @@ import CountdownTimer from '../components/ui/CountdownTimer.jsx';
 import SearchBar from '../components/ui/SearchBar.jsx';
 import Spinner from '../components/ui/Spinner.jsx';
 import ErrorBanner from '../components/ui/ErrorBanner.jsx';
+import NewsFeedPreview from '../components/news/NewsFeedPreview.jsx';
 import './Home.css';
 
 const VIEW_TITLES = {
@@ -113,6 +114,8 @@ export default function Home() {
           )}
         </>
       )}
+
+      <NewsFeedPreview />
     </div>
   );
 }

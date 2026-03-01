@@ -1,7 +1,7 @@
 import logger from '../utils/logger.js';
 
 const WISHLIST_BASE =
-  'https://store.steampowered.com/search/results/?filter=wishlist&json=1&count=25&ndl=1';
+  'https://store.steampowered.com/search/results/?filter=comingsoon&sort_by=Wishlisted_DESC&json=1&count=25&ndl=1';
 const APPID_FROM_LOGO = /steam\/apps\/(\d+)\//;
 
 const MOST_PLAYED_URL =
@@ -118,15 +118,16 @@ export async function fetchCurrentPlayers(appids) {
 }
 
 /**
- * Fetches the top most-wishlisted UPCOMING games on Steam.
- * Fetches 5 pages (125 games), deduplicates, then batch-checks each game's
- * release status via appdetails — only games still marked coming_soon are kept.
+ * Fetches the top 100 most-wishlisted UPCOMING games on Steam.
+ * Uses Steam's comingsoon filter sorted by wishlist count, so only
+ * unreleased games are returned — no client-side filtering needed.
+ * Makes 4 sequential page requests (25 items each) and deduplicates.
  * @returns {Promise<Array<{rank: number, appid: number, name: string, logo: string}>>}
  */
 export async function fetchWishlistedGames() {
   const results = [];
   const PAGE_SIZE = 25;
-  const PAGES = 5; // fetch extra so we have enough after filtering released games
+  const PAGES = 4;
 
   for (let page = 0; page < PAGES; page++) {
     const start = page * PAGE_SIZE;
@@ -154,23 +155,5 @@ export async function fetchWishlistedGames() {
     }
   }
 
-  // Filter to only upcoming (unreleased) games via appdetails coming_soon flag.
-  // Batch 10 at a time to avoid hammering Steam's API.
-  const BATCH_SIZE = 10;
-  const upcoming = [];
-  for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
-    const batch = deduped.slice(i, i + BATCH_SIZE);
-    const settled = await Promise.allSettled(
-      batch.map((entry) =>
-        fetchAppDetails(entry.appid).then((d) => ({ entry, comingSoon: d?.coming_soon ?? false })),
-      ),
-    );
-    for (const r of settled) {
-      if (r.status === 'fulfilled' && r.value.comingSoon) {
-        upcoming.push(r.value.entry);
-      }
-    }
-  }
-
-  return upcoming.slice(0, 100).map((entry, i) => ({ rank: i + 1, ...entry }));
+  return deduped.slice(0, 100).map((entry, i) => ({ rank: i + 1, ...entry }));
 }

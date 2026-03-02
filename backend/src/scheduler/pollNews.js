@@ -5,11 +5,11 @@ import logger from '../utils/logger.js';
 const RSS_FEEDS = [
   { name: 'PC Gamer',           url: 'https://www.pcgamer.com/rss/' },
   { name: 'Rock Paper Shotgun', url: 'https://www.rockpapershotgun.com/feed' },
-  { name: 'Eurogamer',          url: 'https://www.eurogamer.net/?format=rss' },
+  { name: 'Eurogamer',          url: 'https://www.eurogamer.net/feed' },
   { name: 'Kotaku',             url: 'https://kotaku.com/rss' },
   { name: 'IGN',                url: 'https://feeds.ign.com/ign/all' },
   { name: 'Polygon',            url: 'https://www.polygon.com/rss/index.xml' },
-  { name: 'PCGamesN',           url: 'https://www.pcgamesn.com/feeds/all' },
+  { name: 'PCGamesN',           url: 'https://www.pcgamesn.com/mainrss.xml' },
   { name: 'GameSpot',           url: 'https://www.gamespot.com/feeds/news' },
   { name: 'VGC',                url: 'https://www.videogameschronicle.com/feed/' },
   { name: 'PC Invasion',        url: 'https://www.pcinvasion.com/feed/' },

@@ -39,12 +39,14 @@ export default function GameDetail() {
   }, [appid]);
 
   useEffect(() => {
+    setHourlyData(null);
     api.getHourlyPattern(appid)
       .then((result) => setHourlyData(result.data))
       .catch(() => setHourlyData([]));
   }, [appid]);
 
   useEffect(() => {
+    setRankData(null);
     api.getRankHistory(appid, safeRankRange)
       .then((result) => setRankData(result.data))
       .catch(() => setRankData([]));
@@ -86,6 +88,9 @@ export default function GameDetail() {
   const momValue = game?.mom_pct != null
     ? `${game.mom_pct >= 0 ? '▲' : '▼'} ${Math.abs(game.mom_pct)}%`
     : null;
+  const momColor = game?.mom_pct != null
+    ? (game.mom_pct >= 0 ? '#4caf50' : '#f44336')
+    : undefined;
 
   return (
     <div className="game-detail-page">
@@ -126,6 +131,7 @@ export default function GameDetail() {
                 <StatBadge
                   label="vs Last Month"
                   value={momValue}
+                  valueStyle={{ color: momColor }}
                 />
               )}
             </div>

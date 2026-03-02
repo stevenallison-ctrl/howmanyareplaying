@@ -13,11 +13,11 @@ router.get('/:appid', asyncHandler(async (req, res) => {
   const { rows } = await pool.query(
     `SELECT g.appid, g.name, g.header_image, g.last_fetched_at,
             lc.current_ccu, lc.peak_24h, lc.rank,
-            (SELECT ROUND(AVG(peak_ccu))
+            (SELECT ROUND(AVG(peak_ccu))::integer
              FROM daily_peaks
              WHERE appid = g.appid
                AND peak_date >= DATE_TRUNC('month', CURRENT_DATE)) AS this_month_avg,
-            (SELECT ROUND(AVG(peak_ccu))
+            (SELECT ROUND(AVG(peak_ccu))::integer
              FROM daily_peaks
              WHERE appid = g.appid
                AND peak_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'

@@ -4,6 +4,7 @@ import { warmCache } from './services/gameCache.js';
 import { registerJobs } from './scheduler/index.js';
 import { pollLive } from './scheduler/pollLive.js';
 import { pollNews } from './scheduler/pollNews.js';
+import { refreshWatchlist } from './scheduler/refreshWatchlist.js';
 import { createApp } from './app.js';
 import logger from './utils/logger.js';
 import pool from './db/pool.js';
@@ -20,10 +21,19 @@ async function main() {
   // 3. Register cron jobs
   registerJobs();
 
-  // 4. Do an immediate poll so data is available on first request
+  // 4. On first deploy, seed wishlist tracking immediately so the next
+  //    pollLive has games to watch. Must complete before pollLive runs.
+  const { rows: wlRows } = await pool.query('SELECT 1 FROM wishlist_tracking LIMIT 1');
+  if (wlRows.length === 0) {
+    await refreshWatchlist().catch((err) =>
+      logger.warn('[refreshWatchlist] initial seed failed:', err.message),
+    );
+  }
+
+  // 5. Do an immediate poll so data is available on first request
   await pollLive();
 
-  // 5. On first deploy, run news scrape immediately (table will be empty)
+  // 6. On first deploy, run news scrape immediately (table will be empty)
   const { rows } = await pool.query('SELECT 1 FROM news_articles LIMIT 1');
   if (rows.length === 0) {
     pollNews().catch((err) =>
@@ -31,7 +41,7 @@ async function main() {
     );
   }
 
-  // 6. Start HTTP server
+  // 7. Start HTTP server
   const app = createApp();
   app.listen(PORT, () => {
     logger.info(`[server] listening on port ${PORT}`);

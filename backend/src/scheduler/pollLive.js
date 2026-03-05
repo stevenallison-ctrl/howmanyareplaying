@@ -152,6 +152,44 @@ export async function pollLive() {
   const currentPlayerMap = await fetchCurrentPlayers(appids);
   logger.info(`[pollLive] fetched real-time counts for ${currentPlayerMap.size}/${appids.length} games`);
 
+  // Check wishlist-tracked games that Steam's API hasn't surfaced yet.
+  // If any beat the lowest-ranked top-100 game by current CCU, inject them.
+  const steamAppidSet = new Set(appids);
+  const { rows: watchlistRows } = await pool.query('SELECT appid FROM wishlist_tracking');
+  const watchlistAppids = watchlistRows.map((r) => r.appid).filter((id) => !steamAppidSet.has(id));
+
+  let watchlistCcuMap = new Map();
+  if (watchlistAppids.length > 0) {
+    watchlistCcuMap = await fetchCurrentPlayers(watchlistAppids);
+    logger.info(`[pollLive] fetched CCU for ${watchlistCcuMap.size}/${watchlistAppids.length} watchlist games`);
+  }
+
+  const top100Ccus = ranks
+    .map((r) => currentPlayerMap.get(r.appid) ?? r.peak_in_game)
+    .filter((v) => v != null && v > 0);
+  const minTop100Ccu = top100Ccus.length > 0 ? Math.min(...top100Ccus) : Infinity;
+
+  const promotedGames = watchlistAppids
+    .filter((appid) => (watchlistCcuMap.get(appid) ?? 0) > minTop100Ccu)
+    .map((appid) => ({ appid, ccu: watchlistCcuMap.get(appid) }));
+
+  if (promotedGames.length > 0) {
+    logger.info(`[pollLive] ${promotedGames.length} watchlist game(s) promoted to leaderboard`);
+  }
+
+  // Ensure promoted games exist in the games table before the transaction.
+  for (const { appid } of promotedGames) {
+    const { rows } = await pool.query('SELECT appid FROM games WHERE appid = $1', [appid]);
+    if (rows.length === 0) {
+      const details      = await fetchAppDetails(appid);
+      const name         = details?.name         ?? `App ${appid}`;
+      const header_image = details?.header_image ?? null;
+      const release_date = details?.release_date ?? null;
+      await upsertGameMeta(appid, name, header_image, release_date);
+      newGameIds.push(appid);
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -159,6 +197,12 @@ export async function pollLive() {
     // 3. Insert CCU snapshots (real-time counts)
     for (const { appid, peak_in_game } of ranks) {
       const ccu = currentPlayerMap.get(appid) ?? peak_in_game;
+      await client.query(
+        'INSERT INTO ccu_snapshots (appid, ccu) VALUES ($1, $2)',
+        [appid, ccu],
+      );
+    }
+    for (const { appid, ccu } of promotedGames) {
       await client.query(
         'INSERT INTO ccu_snapshots (appid, ccu) VALUES ($1, $2)',
         [appid, ccu],
@@ -177,17 +221,36 @@ export async function pollLive() {
         [appid, today, ccu],
       );
     }
+    for (const { appid, ccu } of promotedGames) {
+      await client.query(
+        `INSERT INTO daily_peaks (appid, peak_date, peak_ccu)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (appid, peak_date)
+         DO UPDATE SET peak_ccu = GREATEST(daily_peaks.peak_ccu, EXCLUDED.peak_ccu)`,
+        [appid, today, ccu],
+      );
+    }
 
     // 5. Rebuild leaderboard_cache atomically.
-    // Snapshot current CCU values before wiping, so we can compute trend delta.
+    // Merge top-100 and any promoted watchlist games, rank by current CCU.
     const { rows: prevRows } = await client.query(
       'SELECT appid, current_ccu FROM leaderboard_cache',
     );
     const prevCcuMap = new Map(prevRows.map((r) => [r.appid, r.current_ccu]));
 
+    const allCandidates = [
+      ...ranks.map((r) => ({
+        appid:      r.appid,
+        currentCcu: currentPlayerMap.get(r.appid) ?? r.peak_in_game,
+      })),
+      ...promotedGames.map(({ appid, ccu }) => ({ appid, currentCcu: ccu })),
+    ];
+    allCandidates.sort((a, b) => b.currentCcu - a.currentCcu);
+    const top100 = allCandidates.slice(0, 100);
+
     await client.query('DELETE FROM leaderboard_cache');
-    for (const { rank, appid, peak_in_game } of ranks) {
-      const currentCcu = currentPlayerMap.get(appid) ?? peak_in_game;
+    for (const [idx, { appid, currentCcu }] of top100.entries()) {
+      const rank = idx + 1;
       const { rows: peakRows } = await client.query(
         `SELECT GREATEST(MAX(ccu), $1) AS peak_24h
          FROM ccu_snapshots
@@ -212,7 +275,10 @@ export async function pollLive() {
     }
 
     await client.query('COMMIT');
-    logger.info(`[pollLive] done in ${Date.now() - start}ms — ${ranks.length} games`);
+    logger.info(
+      `[pollLive] done in ${Date.now() - start}ms — ${top100.length} games` +
+      (promotedGames.length > 0 ? ` (${promotedGames.length} from watchlist)` : ''),
+    );
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('[pollLive] transaction rolled back:', err.message);
@@ -233,7 +299,7 @@ export async function pollLive() {
      ON CONFLICT (appid, recorded_date) DO NOTHING`,
   ).catch((err) => logger.warn('[pollLive] rank history failed:', err.message));
 
-  // 7. Retroactive history backfill for brand-new games (fire and forget)
+  // 8. Retroactive history backfill for brand-new games (fire and forget)
   for (const appid of newGameIds) {
     backfillNewGame(appid).catch((err) =>
       logger.warn(`[pollLive] retroactive backfill failed for ${appid}: ${err.message}`),

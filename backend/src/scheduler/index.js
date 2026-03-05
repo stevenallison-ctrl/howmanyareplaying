@@ -4,6 +4,7 @@ import { pollExtended } from './pollExtended.js';
 import { calcDailyPeak } from './calcDailyPeak.js';
 import { pruneSnapshots } from './prune.js';
 import { pollNews } from './pollNews.js';
+import { refreshWatchlist } from './refreshWatchlist.js';
 import logger from '../utils/logger.js';
 
 export function registerJobs() {
@@ -35,5 +36,12 @@ export function registerJobs() {
     );
   }, { timezone: 'America/New_York' });
 
-  logger.info('[scheduler] jobs registered (live: :00, extended: :30, peak: 23:55, prune: 01:00, news: 09:00 EST)');
+  // Refresh wishlist tracking table daily at 06:00 UTC
+  cron.schedule('0 6 * * *', async () => {
+    await refreshWatchlist().catch((err) =>
+      logger.error('[refreshWatchlist] cron failed:', err.message),
+    );
+  }, { timezone: 'UTC' });
+
+  logger.info('[scheduler] jobs registered (live: :00, extended: :30, peak: 23:55, prune: 01:00, news: 09:00 EST, watchlist: 06:00 UTC)');
 }

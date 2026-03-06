@@ -2,6 +2,8 @@ import logger from '../utils/logger.js';
 
 const WISHLIST_BASE =
   'https://store.steampowered.com/search/results/?filter=popularwishlist&json=1&count=25&ndl=1';
+const NEW_RELEASES_BASE =
+  'https://store.steampowered.com/search/results/?filter=newreleases&json=1&count=25&ndl=1';
 const APPID_FROM_LOGO = /steam\/apps\/(\d+)\//;
 
 const MOST_PLAYED_URL =
@@ -156,4 +158,39 @@ export async function fetchWishlistedGames() {
   }
 
   return deduped.slice(0, 100).map((entry, i) => ({ rank: i + 1, ...entry }));
+}
+
+/**
+ * Fetches the top 50 popular new releases from Steam.
+ * Used by refreshWatchlist to catch games on launch day before
+ * GetMostPlayedGames picks them up.
+ * @returns {Promise<Array<{appid: number, name: string}>>}
+ */
+export async function fetchNewReleases() {
+  const results = [];
+  const PAGE_SIZE = 25;
+  const PAGES = 2;
+
+  for (let page = 0; page < PAGES; page++) {
+    const start = page * PAGE_SIZE;
+    const res = await fetch(`${NEW_RELEASES_BASE}&start=${start}`, {
+      headers: { 'User-Agent': 'howmanyareplaying.com/watchlist' },
+    });
+    if (!res.ok) throw new Error(`Steam new releases API responded ${res.status} at start=${start}`);
+    const json = await res.json();
+    const items = json?.items;
+    if (!Array.isArray(items)) throw new Error(`Unexpected new releases response shape at start=${start}`);
+    for (const item of items) {
+      const match = item.logo?.match(APPID_FROM_LOGO);
+      if (!match || !item.name) continue;
+      results.push({ appid: parseInt(match[1], 10), name: item.name });
+    }
+  }
+
+  const seen = new Set();
+  return results.filter(({ appid }) => {
+    if (seen.has(appid)) return false;
+    seen.add(appid);
+    return true;
+  });
 }

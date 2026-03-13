@@ -19,7 +19,7 @@ async function getBrowser() {
   return browser;
 }
 
-app.get('/*', async (req, res) => {
+app.use(async (req, res) => {
   const url = req.url.slice(1); // strip leading /
   if (!url.startsWith('http')) {
     return res.status(400).send('Bad request: URL must start with http');

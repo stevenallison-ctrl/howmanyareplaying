@@ -13,12 +13,34 @@ export default function News() {
   const [error, setError]       = useState(null);
 
   useEffect(() => {
-    document.title = 'CCU News | How Many Are Playing';
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content',
-      'Gaming news about Steam concurrent player counts, CCU records, and player base changes for top games.');
+    const title = 'CCU News | How Many Are Playing';
+    const desc  = 'Gaming news about Steam concurrent player counts, CCU records, and player base changes for top games.';
+    const url   = 'https://howmanyareplaying.com/news';
+
+    document.title = title;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', url);
+
     return () => {
-      document.title = 'Top 100 Steam Games by CCU | How Many Are Playing';
+      const dTitle = 'Top 100 Steam Games by CCU | How Many Are Playing';
+      const dDesc  = 'Real-time Steam concurrent player leaderboard — top 100 games updated every hour. Track player counts, trends, and historical peaks.';
+      const dUrl   = 'https://howmanyareplaying.com/';
+      document.title = dTitle;
+      document.querySelector('meta[name="description"]')?.setAttribute('content', dDesc);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', dTitle);
+      document.querySelector('meta[property="og:url"]')?.setAttribute('content', dUrl);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', dDesc);
+      canonical.setAttribute('href', dUrl);
     };
   }, []);
 

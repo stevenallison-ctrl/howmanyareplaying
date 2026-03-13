@@ -165,13 +165,39 @@ export default function Compare() {
   }, [appidA, appidB]);
 
   useEffect(() => {
-    if (gameA && gameB) {
-      document.title = `${gameA.name} vs ${gameB.name} | How Many Are Playing`;
-    } else {
-      document.title = 'Compare Games | How Many Are Playing';
+    const url = 'https://howmanyareplaying.com/compare';
+
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
     }
+    canonical.setAttribute('href', url);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
+
+    const title = (gameA && gameB)
+      ? `${gameA.name} vs ${gameB.name} | How Many Are Playing`
+      : 'Compare Games | How Many Are Playing';
+    const desc = (gameA && gameB)
+      ? `Compare ${gameA.name} and ${gameB.name} concurrent player counts over the last 30 days on Steam.`
+      : 'Compare Steam concurrent player counts for two games side-by-side.';
+
+    document.title = title;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+
     return () => {
-      document.title = 'Top 100 Steam Games by CCU | How Many Are Playing';
+      const dTitle = 'Top 100 Steam Games by CCU | How Many Are Playing';
+      const dDesc  = 'Real-time Steam concurrent player leaderboard — top 100 games updated every hour. Track player counts, trends, and historical peaks.';
+      const dUrl   = 'https://howmanyareplaying.com/';
+      document.title = dTitle;
+      document.querySelector('meta[name="description"]')?.setAttribute('content', dDesc);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', dTitle);
+      document.querySelector('meta[property="og:url"]')?.setAttribute('content', dUrl);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', dDesc);
+      canonical.setAttribute('href', dUrl);
     };
   }, [gameA, gameB]);
 

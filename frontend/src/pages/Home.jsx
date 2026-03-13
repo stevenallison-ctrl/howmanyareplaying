@@ -46,9 +46,13 @@ export default function Home() {
 
   useEffect(() => {
     const seo = VIEW_SEO[view] ?? VIEW_SEO.live;
+    const url = 'https://howmanyareplaying.com/';
+
     document.title = seo.title;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', seo.desc);
+    document.querySelector('meta[name="description"]')?.setAttribute('content', seo.desc);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', seo.title);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', seo.desc);
 
     let canonical = document.querySelector('link[rel="canonical"]');
     if (!canonical) {
@@ -56,7 +60,7 @@ export default function Home() {
       canonical.setAttribute('rel', 'canonical');
       document.head.appendChild(canonical);
     }
-    canonical.setAttribute('href', 'https://howmanyareplaying.com/');
+    canonical.setAttribute('href', url);
   }, [view]);
 
   const handleViewChange = (newView) => {

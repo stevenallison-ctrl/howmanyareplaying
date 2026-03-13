@@ -54,10 +54,18 @@ export default function GameDetail() {
 
   useEffect(() => {
     if (!game) return;
-    document.title = `${game.name} — Player Count | How Many Are Playing`;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content',
-      `Live and historical concurrent player count for ${game.name} on Steam.`);
+    const title = `${game.name} — Player Count | How Many Are Playing`;
+    const desc  = `Live and historical concurrent player count for ${game.name} on Steam.`;
+    const url   = `https://howmanyareplaying.com/game/${game.appid}`;
+
+    document.title = title;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+    if (game.header_image) {
+      document.querySelector('meta[property="og:image"]')?.setAttribute('content', game.header_image);
+    }
 
     // JSON-LD structured data
     document.getElementById('game-jsonld')?.remove();
@@ -68,8 +76,8 @@ export default function GameDetail() {
       '@context': 'https://schema.org',
       '@type': 'VideoGame',
       name: game.name,
-      url: `https://howmanyareplaying.com/game/${game.appid}`,
-      description: `Live and historical concurrent player count for ${game.name} on Steam.`,
+      url,
+      description: desc,
       gamePlatform: 'PC',
       applicationCategory: 'Game',
     });
@@ -87,12 +95,17 @@ export default function GameDetail() {
     canonical.setAttribute('href', `https://howmanyareplaying.com/game/${appid}`);
 
     return () => {
-      document.title = 'Top 100 Steam Games by CCU | How Many Are Playing';
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) metaDesc.setAttribute('content',
-        'Real-time Steam concurrent player leaderboard — top 100 games updated every hour. Track player counts, trends, and historical peaks.');
+      const dTitle = 'Top 100 Steam Games by CCU | How Many Are Playing';
+      const dDesc  = 'Real-time Steam concurrent player leaderboard — top 100 games updated every hour. Track player counts, trends, and historical peaks.';
+      const dUrl   = 'https://howmanyareplaying.com/';
+      document.title = dTitle;
+      document.querySelector('meta[name="description"]')?.setAttribute('content', dDesc);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', dTitle);
+      document.querySelector('meta[property="og:url"]')?.setAttribute('content', dUrl);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', dDesc);
+      document.querySelector('meta[property="og:image"]')?.setAttribute('content', '');
       document.getElementById('game-jsonld')?.remove();
-      canonical.setAttribute('href', 'https://howmanyareplaying.com/');
+      canonical.setAttribute('href', dUrl);
     };
   }, [appid]);
 

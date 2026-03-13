@@ -37,5 +37,14 @@ services:
     depends_on:
       - backend
 
+  prerender:
+    build:
+      context: ./prerender
+    restart: unless-stopped
+    environment:
+      MEMORY_CACHE: "1"
+      CACHE_MAXSIZE: "100"
+      CACHE_TTL: "3600"
+
 volumes:
   pgdata:

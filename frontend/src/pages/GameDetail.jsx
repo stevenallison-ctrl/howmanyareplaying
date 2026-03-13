@@ -58,16 +58,43 @@ export default function GameDetail() {
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute('content',
       `Live and historical concurrent player count for ${game.name} on Steam.`);
+
+    // JSON-LD structured data
+    document.getElementById('game-jsonld')?.remove();
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'game-jsonld';
+    script.textContent = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'VideoGame',
+      name: game.name,
+      url: `https://howmanyareplaying.com/game/${game.appid}`,
+      description: `Live and historical concurrent player count for ${game.name} on Steam.`,
+      gamePlatform: 'PC',
+      applicationCategory: 'Game',
+    });
+    document.head.appendChild(script);
   }, [game]);
 
   useEffect(() => {
+    // Canonical tag for this game page
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', `https://howmanyareplaying.com/game/${appid}`);
+
     return () => {
       document.title = 'Top 100 Steam Games by CCU | How Many Are Playing';
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc) metaDesc.setAttribute('content',
         'Real-time Steam concurrent player leaderboard — top 100 games updated every hour. Track player counts, trends, and historical peaks.');
+      document.getElementById('game-jsonld')?.remove();
+      canonical.setAttribute('href', 'https://howmanyareplaying.com/');
     };
-  }, []);
+  }, [appid]);
 
   const handleRangeChange = (newRange) => {
     setSearchParams((prev) => {
